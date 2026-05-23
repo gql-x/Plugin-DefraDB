@@ -37,12 +37,12 @@ function createDefraDBComposer(config = {}) {
 }
 
 function registerPlugin({
-	NAME_PREFIX = "",
+	namePrefix = "",
 	transport = null,
 	...rest
 } = {}) {
 	return dbRegisterPlugin({
-		NAME_PREFIX,
+		namePrefix,
 		nonPrefixedTypes: DEFRADB_NON_PREFIXED_EXTRAS,
 		transport,
 		decorate: decorateDefraDB,

@@ -40,7 +40,7 @@ DefraDB doesn't currently support native collection namespacing, so this DSL app
 
 For predictability, a prefixed root field name (e.g., `add_Dev_User`) is automatically aliased back to its non-prefixed form (`add_User`) in the result set.
 
-For example, with `NAME_PREFIX: "Dev_"`, `User` automatically gets prefixed to `Dev_User` (i.e., `add_User: add_Dev_User`) to match what's actually in your schema. But the result set uses the alias (original) name (`add_User`).
+For example, with `namePrefix: "Dev_"`, `User` automatically gets prefixed to `Dev_User` (i.e., `add_User: add_Dev_User`) to match what's actually in your schema. But the result set uses the alias (original) name (`add_User`).
 
 The set of non-prefixed types extends the GraphQL spec built-ins with these additional DefraDB-specific types: `JSON`, `DateTime`, `Ordering`, `Commit`, `Blob`, `_commits`.
 
@@ -138,7 +138,7 @@ The most obvious difference is that there's no pre-definition of variables/types
 import { createDefraDBComposer } from "@gql-x/plugin-defradb";
 
 var DQL = createDefraDBComposer({
-    NAME_PREFIX: "Dev_",
+    namePrefix: "Dev_",
 });
 
 var query = DQL.collection("User").get(
@@ -201,7 +201,7 @@ To construct an instance of this plugin for use in your application:
 ```js
 import { createDefraDBComposer } from "@gql-x/plugin-defradb";
 
-var DQL = createDefraDBComposer({ NAME_PREFIX: "Dev_", });
+var DQL = createDefraDBComposer({ namePrefix: "Dev_", });
 ```
 
 `DQL` is the plugin instance -- a DefraDB extended instance of the underlying GraphQL Composer. It includes all methods inherited from Composer (`query(..)`, `$f`, etc), as well as DefraDB-specific helpers.
@@ -212,7 +212,7 @@ Initializes an instance of the plugin.
 
 Pass in an optional object with the following configurations to customize the instance:
 
-* `NAME_PREFIX` (string, default: `""`): sets the namespace prefix (e.g., `"Dev_"`)
+* `namePrefix` (string, default: `""`): sets the namespace prefix (e.g., `"Dev_"`)
 
 * `transport` (object, optional): a transport object whose methods are spread directly onto the returned instance. The plugin doesn't introspect the transport — whatever methods it provides become methods on the instance. Pass this when you have an execution layer you want the instance to expose; otherwise, the returned instance is purely a query-string builder.
 

@@ -37,7 +37,7 @@ test("collection() throws on invalid name", () => {
 // ************************
 
 test("get() produces query shape", () => {
-	var DQL = createDefraDBComposer({ NAME_PREFIX: "Dev_", });
+	var DQL = createDefraDBComposer({ namePrefix: "Dev_", });
 	var { text, operationName, resultName, kind, } = DQL.collection("User").get(
 		DQL.selectionSet([ "_docID", "username", ])
 	);
@@ -49,7 +49,7 @@ test("get() produces query shape", () => {
 });
 
 test("get() with varFilters hoists var defs", () => {
-	var DQL = createDefraDBComposer({ NAME_PREFIX: "Dev_", });
+	var DQL = createDefraDBComposer({ namePrefix: "Dev_", });
 	var { text, } = DQL.collection("User").get(
 		DQL.varFilters(DQL.$p.eq("username","String")),
 		DQL.selectionSet([ "_docID", ])
@@ -74,7 +74,7 @@ test("get() with no namePrefix has no alias", () => {
 // ************************
 
 test("add() produces mutation shape", () => {
-	var DQL = createDefraDBComposer({ NAME_PREFIX: "Dev_", });
+	var DQL = createDefraDBComposer({ namePrefix: "Dev_", });
 	var { text, operationName, resultName, kind, } = DQL.collection("User").add(
 		DQL.varInputs(DQL.$v("username","String")),
 		DQL.selectionSet([ "_docID", ])
@@ -92,7 +92,7 @@ test("add() produces mutation shape", () => {
 // ************************
 
 test("update() produces mutation shape with update_ action", () => {
-	var DQL = createDefraDBComposer({ NAME_PREFIX: "Dev_", });
+	var DQL = createDefraDBComposer({ namePrefix: "Dev_", });
 	var { text, operationName, kind, } = DQL.collection("User").update(
 		DQL.varInputs(DQL.$v("username","String")),
 		DQL.selectionSet([ "_docID", ])
@@ -109,7 +109,7 @@ test("update() produces mutation shape with update_ action", () => {
 // ************************
 
 test("delete() produces mutation shape with delete_ action", () => {
-	var DQL = createDefraDBComposer({ NAME_PREFIX: "Dev_", });
+	var DQL = createDefraDBComposer({ namePrefix: "Dev_", });
 	var { text, operationName, kind, } = DQL.collection("User").delete(
 		DQL.varFilters(DQL.$p.eq("_docID","ID")),
 		DQL.selectionSet([ "_docID", ])
@@ -126,7 +126,7 @@ test("delete() produces mutation shape with delete_ action", () => {
 // ************************
 
 test("aggregate proxy: COUNT() produces query shape", () => {
-	var DQL = createDefraDBComposer({ NAME_PREFIX: "Dev_", });
+	var DQL = createDefraDBComposer({ namePrefix: "Dev_", });
 	var { text, operationName, resultName, kind, } = DQL.collection("User").COUNT();
 	assert.equal(kind,"query");
 	assert.equal(operationName,"CountUser");
@@ -136,7 +136,7 @@ test("aggregate proxy: COUNT() produces query shape", () => {
 });
 
 test("aggregate proxy: SUM() produces query shape", () => {
-	var DQL = createDefraDBComposer({ NAME_PREFIX: "Dev_", });
+	var DQL = createDefraDBComposer({ namePrefix: "Dev_", });
 	var { text, operationName, resultName, } = DQL.collection("User").SUM(
 		DQL.litArgs(DQL.$m("field","age"))
 	);
@@ -146,7 +146,7 @@ test("aggregate proxy: SUM() produces query shape", () => {
 });
 
 test("aggregate proxy: MAX() with varFilters", () => {
-	var DQL = createDefraDBComposer({ NAME_PREFIX: "Dev_", });
+	var DQL = createDefraDBComposer({ namePrefix: "Dev_", });
 	var { text, } = DQL.collection("User").MAX(
 		DQL.litArgs(DQL.$m("field","age")),
 		DQL.varFilters(DQL.$p.eq("isActive","Boolean"))
@@ -241,7 +241,7 @@ test("aggregate proxy query.exec() returns result[resultName]", async () => {
 // ************************
 
 test("prefix() returns api with working collection()", () => {
-	var DQL = createDefraDBComposer({ NAME_PREFIX: "Dev_", });
+	var DQL = createDefraDBComposer({ namePrefix: "Dev_", });
 	var v2 = DQL.prefix("v2_");
 	var { text, } = v2.collection("User").get(
 		DQL.selectionSet([ "_docID", ])
@@ -250,7 +250,7 @@ test("prefix() returns api with working collection()", () => {
 });
 
 test("aggregate proxy works through prefix() chain", () => {
-	var DQL = createDefraDBComposer({ NAME_PREFIX: "Dev_", });
+	var DQL = createDefraDBComposer({ namePrefix: "Dev_", });
 	var v2 = DQL.prefix("v2_");
 	var { text, resultName, } = v2.collection("User").COUNT();
 	assert.equal(resultName,"COUNT");

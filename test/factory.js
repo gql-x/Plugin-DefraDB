@@ -75,10 +75,10 @@ test("api exposes collection()", () => {
 
 
 // ************************
-// NAME_PREFIX
+// namePrefix
 // ************************
 
-test("NAME_PREFIX defaults to empty string", () => {
+test("namePrefix defaults to empty string", () => {
 	var DQL = createDefraDBComposer();
 	var { text, } = DQL.query({
 		root: { field: "User", },
@@ -88,8 +88,8 @@ test("NAME_PREFIX defaults to empty string", () => {
 	assert.equal(normalize(text),"query { User { _docID } }");
 });
 
-test("NAME_PREFIX applied to queries", () => {
-	var DQL = createDefraDBComposer({ NAME_PREFIX: "Dev_", });
+test("namePrefix applied to queries", () => {
+	var DQL = createDefraDBComposer({ namePrefix: "Dev_", });
 	var { text, } = DQL.query({
 		root: { field: "User", },
 		operationName: null,
@@ -104,7 +104,7 @@ test("NAME_PREFIX applied to queries", () => {
 // ************************
 
 test("DateTime not prefixed in varDefs", () => {
-	var DQL = createDefraDBComposer({ NAME_PREFIX: "Dev_", });
+	var DQL = createDefraDBComposer({ namePrefix: "Dev_", });
 	var { text, } = DQL.query(
 		{ operationName: "Get", },
 		DQL.root("User"),
@@ -115,7 +115,7 @@ test("DateTime not prefixed in varDefs", () => {
 });
 
 test("JSON not prefixed in varDefs", () => {
-	var DQL = createDefraDBComposer({ NAME_PREFIX: "Dev_", });
+	var DQL = createDefraDBComposer({ namePrefix: "Dev_", });
 	var { text, } = DQL.query(
 		{ operationName: "Get", },
 		DQL.root("User"),
@@ -126,7 +126,7 @@ test("JSON not prefixed in varDefs", () => {
 });
 
 test("_commits collection name not prefixed", () => {
-	var DQL = createDefraDBComposer({ NAME_PREFIX: "Dev_", });
+	var DQL = createDefraDBComposer({ namePrefix: "Dev_", });
 	var { text, } = DQL.query({
 		collectionName: "_commits",
 		operationName: "Get",
@@ -136,7 +136,7 @@ test("_commits collection name not prefixed", () => {
 });
 
 test("Ordering not prefixed", () => {
-	var DQL = createDefraDBComposer({ NAME_PREFIX: "Dev_", });
+	var DQL = createDefraDBComposer({ namePrefix: "Dev_", });
 	var { text, } = DQL.query(
 		{ operationName: "Get", },
 		DQL.root("User"),
@@ -147,7 +147,7 @@ test("Ordering not prefixed", () => {
 });
 
 test("caller-supplied nonPrefixedTypes merge with defradb extras", () => {
-	var DQL = createDefraDBComposer({ NAME_PREFIX: "Dev_", });
+	var DQL = createDefraDBComposer({ namePrefix: "Dev_", });
 	var { text, } = DQL.query({
 		nonPrefixedTypes: [ "CustomType", ],
 		root: { field: "User", },
@@ -167,7 +167,7 @@ test("caller-supplied nonPrefixedTypes merge with defradb extras", () => {
 // ************************
 
 test("prefix() returns a sibling api with defradb decorations", () => {
-	var DQL = createDefraDBComposer({ NAME_PREFIX: "Dev_", });
+	var DQL = createDefraDBComposer({ namePrefix: "Dev_", });
 	var other = DQL.prefix("v2_");
 	assert.equal(typeof other.query,"function","has query");
 	assert.equal(typeof other.collection,"function","has collection");
@@ -177,7 +177,7 @@ test("prefix() returns a sibling api with defradb decorations", () => {
 });
 
 test("prefix() applies new prefix to queries", () => {
-	var DQL = createDefraDBComposer({ NAME_PREFIX: "Dev_", });
+	var DQL = createDefraDBComposer({ namePrefix: "Dev_", });
 	var other = DQL.prefix("v2_");
 	var { text, } = other.query({
 		root: { field: "User", },
@@ -188,7 +188,7 @@ test("prefix() applies new prefix to queries", () => {
 });
 
 test("prefix() does not mutate the original api's prefix", () => {
-	var DQL = createDefraDBComposer({ NAME_PREFIX: "Dev_", });
+	var DQL = createDefraDBComposer({ namePrefix: "Dev_", });
 	DQL.prefix("v2_");
 	var { text, } = DQL.query({
 		root: { field: "User", },
@@ -247,8 +247,8 @@ test("prefix() preserves transport methods", () => {
 // ************************
 
 test("two createDefraDBComposer() instances produce independent apis", () => {
-	var a = createDefraDBComposer({ NAME_PREFIX: "A_", });
-	var b = createDefraDBComposer({ NAME_PREFIX: "B_", });
+	var a = createDefraDBComposer({ namePrefix: "A_", });
+	var b = createDefraDBComposer({ namePrefix: "B_", });
 
 	var { text: textA, } = a.query({
 		root: { field: "User", },
