@@ -128,7 +128,7 @@ DQL.collection("User").get(
 )
 ```
 
-**NOTE:** The `$f` helper above is shown in its JS-specific tagged-template form (`` $f`alias`...` ``). It also supports a traditional function-call form; see [`$f` Function-Call Form](#f-function-call-form) below.
+**NOTE:** The `$f` helper above is shown in its JS-specific tagged-template form (``` $f`alias``field` ```). It also supports a traditional function-call form (`$f(alias,field)`).
 
 The most obvious difference is that there's no pre-definition of variables/types; the DSL internally tracks (and de-duplicates/de-conflicts) variable annotations *in place* as used, and generates the necessary variable type definitions in the resulting query text.
 
@@ -152,7 +152,7 @@ console.log(query.text);
 
 `createDefraDBComposer()` returns a plugin instance -- conventionally named `DQL` in these docs -- which exposes the entire DSL surface: helpers, builders, collection accessors, and optionally transport-defined methods; all helpers are exposed per-instance.
 
-The result of `DQL.collection(...).get(...)` (and other collection API methods) is a query-result object with `text`, `operationName`, and `resultName` properties; see [Query Builder Result](#query-builder-result) below.
+The result of `DQL.collection(...).get(...)` (and other collection API methods) is a query-result object with `text`, `operationName`, and `resultName` properties; see [Composer Query Result](#composer-query-result) below.
 
 **NOTE:** For executing queries against a live DefraDB instance over HTTP, use [`@gql-x/plugin-defradb-transport-http`](https://github.com/gql-x/plugin-defradb-transport-http) instead; its entry point bundles this package's query-building surface with a transport that offers `exec()` and transaction handling methods.
 
@@ -267,7 +267,7 @@ DQL.collection("User").get({
 // { text: "..", .. }
 ```
 
-### Query Builder Result
+### Composer Query Result
 
 Just like the inherited `query(..)` method, `get(..)`, `add(..)`, `update(..)`, `delete(..)`, and all `<AggregateFn>(..)` methods return a query-builder result object from Composer, which has the following properties:
 
@@ -776,7 +776,7 @@ query CountBook {
 
 The result object is the same query-builder result as `get(..)` / `add(..)` / etc., decorated with `tap(..)`.
 
-## Inherited Composer/Query Builder
+## Inherited Composer (Query Builder)
 
 If you want to build a DefraDB query whose shape doesn't map cleanly to `collection().get/add/update/delete` -- for example, a custom root field, or a query that mixes multiple operations -- you can drop down to the underlying Composer's `query(..)` directly.
 
