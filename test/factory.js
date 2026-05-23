@@ -14,10 +14,10 @@ function normalize(str) {
 // ************************
 
 test("createDefraDBComposer() returns just the api", () => {
-	var db = createDefraDBComposer();
-	assert.ok(!!db,"has api");
-	assert.equal(typeof db.query,"function","has query()");
-	assert.equal(typeof db.prefix,"function","has prefix()");
+	var DQL = createDefraDBComposer();
+	assert.ok(!!DQL,"has api");
+	assert.equal(typeof DQL.query,"function","has query()");
+	assert.equal(typeof DQL.prefix,"function","has prefix()");
 });
 
 test("registerPlugin() returns { api, internals }", () => {
@@ -28,8 +28,8 @@ test("registerPlugin() returns { api, internals }", () => {
 });
 
 test("createDefraDBComposer() with no config", () => {
-	var db = createDefraDBComposer();
-	var { text, } = db.query({
+	var DQL = createDefraDBComposer();
+	var { text, } = DQL.query({
 		root: { field: "User", },
 		operationName: null,
 		selectionSet: [ "_docID", ],
@@ -43,34 +43,34 @@ test("createDefraDBComposer() with no config", () => {
 // ************************
 
 test("api exposes composer helpers", () => {
-	var db = createDefraDBComposer();
-	assert.equal(typeof db.$f,"function","$f");
-	assert.equal(typeof db.$t,"object","$t");
-	assert.equal(typeof db.$v,"function","$v");
-	assert.equal(typeof db.$m,"function","$m");
-	assert.equal(typeof db.varArgs,"function","varArgs");
-	assert.equal(typeof db.litArgs,"function","litArgs");
-	assert.equal(typeof db.varDefs,"function","varDefs");
-	assert.equal(typeof db.selectionSet,"function","selectionSet");
-	assert.equal(typeof db.root,"function","root");
+	var DQL = createDefraDBComposer();
+	assert.equal(typeof DQL.$f,"function","$f");
+	assert.equal(typeof DQL.$t,"object","$t");
+	assert.equal(typeof DQL.$v,"function","$v");
+	assert.equal(typeof DQL.$m,"function","$m");
+	assert.equal(typeof DQL.varArgs,"function","varArgs");
+	assert.equal(typeof DQL.litArgs,"function","litArgs");
+	assert.equal(typeof DQL.varDefs,"function","varDefs");
+	assert.equal(typeof DQL.selectionSet,"function","selectionSet");
+	assert.equal(typeof DQL.root,"function","root");
 });
 
 test("api exposes defradb-specific helpers", () => {
-	var db = createDefraDBComposer();
-	assert.equal(typeof db.$a,"object","$a");
-	assert.equal(typeof db.$p,"function","$p");
-	assert.equal(typeof db.GROUP,"function","GROUP");
-	assert.equal(typeof db.groupBy,"function","groupBy");
-	assert.equal(typeof db.over,"function","over");
-	assert.equal(typeof db.varFilters,"function","varFilters");
-	assert.equal(typeof db.litFilters,"function","litFilters");
-	assert.equal(typeof db.varInputs,"function","varInputs");
-	assert.equal(typeof db.litInputs,"function","litInputs");
+	var DQL = createDefraDBComposer();
+	assert.equal(typeof DQL.$a,"object","$a");
+	assert.equal(typeof DQL.$p,"function","$p");
+	assert.equal(typeof DQL.GROUP,"function","GROUP");
+	assert.equal(typeof DQL.groupBy,"function","groupBy");
+	assert.equal(typeof DQL.over,"function","over");
+	assert.equal(typeof DQL.varFilters,"function","varFilters");
+	assert.equal(typeof DQL.litFilters,"function","litFilters");
+	assert.equal(typeof DQL.varInputs,"function","varInputs");
+	assert.equal(typeof DQL.litInputs,"function","litInputs");
 });
 
 test("api exposes collection()", () => {
-	var db = createDefraDBComposer();
-	assert.equal(typeof db.collection,"function","collection");
+	var DQL = createDefraDBComposer();
+	assert.equal(typeof DQL.collection,"function","collection");
 });
 
 
@@ -79,8 +79,8 @@ test("api exposes collection()", () => {
 // ************************
 
 test("NAME_PREFIX defaults to empty string", () => {
-	var db = createDefraDBComposer();
-	var { text, } = db.query({
+	var DQL = createDefraDBComposer();
+	var { text, } = DQL.query({
 		root: { field: "User", },
 		operationName: null,
 		selectionSet: [ "_docID", ],
@@ -89,8 +89,8 @@ test("NAME_PREFIX defaults to empty string", () => {
 });
 
 test("NAME_PREFIX applied to queries", () => {
-	var db = createDefraDBComposer({ NAME_PREFIX: "Dev_", });
-	var { text, } = db.query({
+	var DQL = createDefraDBComposer({ NAME_PREFIX: "Dev_", });
+	var { text, } = DQL.query({
 		root: { field: "User", },
 		operationName: null,
 		selectionSet: [ "_docID", ],
@@ -104,30 +104,30 @@ test("NAME_PREFIX applied to queries", () => {
 // ************************
 
 test("DateTime not prefixed in varDefs", () => {
-	var db = createDefraDBComposer({ NAME_PREFIX: "Dev_", });
-	var { text, } = db.query(
+	var DQL = createDefraDBComposer({ NAME_PREFIX: "Dev_", });
+	var { text, } = DQL.query(
 		{ operationName: "Get", },
-		db.root("User"),
-		db.varDefs(db.$v("sinceDate","DateTime"))
+		DQL.root("User"),
+		DQL.varDefs(DQL.$v("sinceDate","DateTime"))
 	);
 	assert.ok(text.includes("$sinceDate:DateTime"));
 	assert.ok(!text.includes("Dev_DateTime"));
 });
 
 test("JSON not prefixed in varDefs", () => {
-	var db = createDefraDBComposer({ NAME_PREFIX: "Dev_", });
-	var { text, } = db.query(
+	var DQL = createDefraDBComposer({ NAME_PREFIX: "Dev_", });
+	var { text, } = DQL.query(
 		{ operationName: "Get", },
-		db.root("User"),
-		db.varDefs(db.$v("payload","JSON"))
+		DQL.root("User"),
+		DQL.varDefs(DQL.$v("payload","JSON"))
 	);
 	assert.ok(text.includes("$payload:JSON"));
 	assert.ok(!text.includes("Dev_JSON"));
 });
 
 test("_commits collection name not prefixed", () => {
-	var db = createDefraDBComposer({ NAME_PREFIX: "Dev_", });
-	var { text, } = db.query({
+	var DQL = createDefraDBComposer({ NAME_PREFIX: "Dev_", });
+	var { text, } = DQL.query({
 		collectionName: "_commits",
 		operationName: "Get",
 	});
@@ -136,19 +136,19 @@ test("_commits collection name not prefixed", () => {
 });
 
 test("Ordering not prefixed", () => {
-	var db = createDefraDBComposer({ NAME_PREFIX: "Dev_", });
-	var { text, } = db.query(
+	var DQL = createDefraDBComposer({ NAME_PREFIX: "Dev_", });
+	var { text, } = DQL.query(
 		{ operationName: "Get", },
-		db.root("User"),
-		db.varDefs(db.$v("order","Ordering"))
+		DQL.root("User"),
+		DQL.varDefs(DQL.$v("order","Ordering"))
 	);
 	assert.ok(text.includes("$order:Ordering"));
 	assert.ok(!text.includes("Dev_Ordering"));
 });
 
 test("caller-supplied nonPrefixedTypes merge with defradb extras", () => {
-	var db = createDefraDBComposer({ NAME_PREFIX: "Dev_", });
-	var { text, } = db.query({
+	var DQL = createDefraDBComposer({ NAME_PREFIX: "Dev_", });
+	var { text, } = DQL.query({
 		nonPrefixedTypes: [ "CustomType", ],
 		root: { field: "User", },
 		operationName: "Get",
@@ -167,8 +167,8 @@ test("caller-supplied nonPrefixedTypes merge with defradb extras", () => {
 // ************************
 
 test("prefix() returns a sibling api with defradb decorations", () => {
-	var db = createDefraDBComposer({ NAME_PREFIX: "Dev_", });
-	var other = db.prefix("v2_");
+	var DQL = createDefraDBComposer({ NAME_PREFIX: "Dev_", });
+	var other = DQL.prefix("v2_");
 	assert.equal(typeof other.query,"function","has query");
 	assert.equal(typeof other.collection,"function","has collection");
 	assert.equal(typeof other.$a,"object","has $a");
@@ -177,8 +177,8 @@ test("prefix() returns a sibling api with defradb decorations", () => {
 });
 
 test("prefix() applies new prefix to queries", () => {
-	var db = createDefraDBComposer({ NAME_PREFIX: "Dev_", });
-	var other = db.prefix("v2_");
+	var DQL = createDefraDBComposer({ NAME_PREFIX: "Dev_", });
+	var other = DQL.prefix("v2_");
 	var { text, } = other.query({
 		root: { field: "User", },
 		operationName: null,
@@ -188,9 +188,9 @@ test("prefix() applies new prefix to queries", () => {
 });
 
 test("prefix() does not mutate the original api's prefix", () => {
-	var db = createDefraDBComposer({ NAME_PREFIX: "Dev_", });
-	db.prefix("v2_");
-	var { text, } = db.query({
+	var DQL = createDefraDBComposer({ NAME_PREFIX: "Dev_", });
+	DQL.prefix("v2_");
+	var { text, } = DQL.query({
 		root: { field: "User", },
 		operationName: null,
 		selectionSet: [ "_docID", ],
@@ -204,8 +204,8 @@ test("prefix() does not mutate the original api's prefix", () => {
 // ************************
 
 test("api without transport has no exec()", () => {
-	var db = createDefraDBComposer();
-	assert.equal(db.exec,undefined,"no exec");
+	var DQL = createDefraDBComposer();
+	assert.equal(DQL.exec,undefined,"no exec");
 });
 
 test("api with transport has transport methods", () => {
@@ -213,9 +213,9 @@ test("api with transport has transport methods", () => {
 		exec() { return null; },
 		hasActiveTransaction() { return false; },
 	};
-	var { api: db, } = registerPlugin({ transport, });
-	assert.equal(typeof db.exec,"function","has exec");
-	assert.equal(typeof db.hasActiveTransaction,"function","has hasActiveTransaction");
+	var { api: DQL, } = registerPlugin({ transport, });
+	assert.equal(typeof DQL.exec,"function","has exec");
+	assert.equal(typeof DQL.hasActiveTransaction,"function","has hasActiveTransaction");
 });
 
 test("transport methods callable through api", () => {
@@ -224,8 +224,8 @@ test("transport methods callable through api", () => {
 			return { __mock: true, text, };
 		},
 	};
-	var { api: db, } = registerPlugin({ transport, });
-	var result = db.exec({ text: "query Foo { x }", });
+	var { api: DQL, } = registerPlugin({ transport, });
+	var result = DQL.exec({ text: "query Foo { x }", });
 	assert.equal(result.__mock,true);
 	assert.equal(result.text,"query Foo { x }");
 });
@@ -235,8 +235,8 @@ test("prefix() preserves transport methods", () => {
 		exec() { return null; },
 		hasActiveTransaction() { return false; },
 	};
-	var { api: db, } = registerPlugin({ transport, });
-	var other = db.prefix("v2_");
+	var { api: DQL, } = registerPlugin({ transport, });
+	var other = DQL.prefix("v2_");
 	assert.equal(typeof other.exec,"function","has exec");
 	assert.equal(typeof other.hasActiveTransaction,"function","has hasActiveTransaction");
 });
