@@ -1,0 +1,29 @@
+{
+	"name": "@gql-x/plugin-defradb",
+	"description": "DefraDB extensions for GraphQL Composer",
+	"version": "0.0.0-pre-202605232304",
+	"main": "./src/defradb.js",
+	"type": "module",
+	"scripts": {
+		"test": "node test/runner.js"
+	},
+	"dependencies": {
+		"@gql-x/composer": "latest"
+	},
+	"browser": {
+		"@gql-x/plugin-defradb": "./src/defradb.js"
+	},
+	"exports": {
+		".": "./src/defradb.js"
+	},
+	"repository": {
+		"url": "git+https://github.com/gql-x/plugin-defradb.git"
+	},
+	"bugs": {
+		"url": "https://github.com/gql-x/plugin-defradb/issues",
+		"email": "getify@gmail.com"
+	},
+	"homepage": "https://github.com/gql-x/plugin-defradb",
+	"author": "Kyle Simpson <getify@gmail.com>",
+	"license": "MIT"
+}
