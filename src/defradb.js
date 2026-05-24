@@ -51,17 +51,19 @@ function registerPlugin({
 }
 
 function decorateDefraDB(prefixedAPI,composer,composerInternals) {
-	// wrap query() to translate defradb-level chunks (collectionName)
-	// into composer-level chunks (root, operationName) before QB sees them.
-	var baseQuery = prefixedAPI.query;
-	prefixedAPI.query = function query(...args) {
-		var translated = translateDefraDBChunks(args);
-		return baseQuery(...translated);
-	};
+	// wrap all four DB-layer entry points to translate defradb-level chunks
+	// (collectionName, actionPrefix) into composer-level chunks (root,
+	// operationName) before the underlying builder sees them.
+	for (let entryPoint of [ "raw", "query", "mutation", "subscription", ]) {
+		let base = prefixedAPI[entryPoint];
+		prefixedAPI[entryPoint] = function wrapped(...args) {
+			var translated = translateDefraDBChunks(args);
+			return base(...translated);
+		};
+	}
 
-	// re-expose composer helpers on the API surface (but NOT root — defradb
-	// provides its own root() with `over` support)
-	Object.assign(prefixedAPI,{
+	return Object.assign(prefixedAPI,{
+		// re-expose composer helpers on the API surface
 		$f: composer.$f,
 		$t: composer.$t,
 		$v: composer.$v,
@@ -69,12 +71,14 @@ function decorateDefraDB(prefixedAPI,composer,composerInternals) {
 		varArgs: composer.varArgs,
 		litArgs: composer.litArgs,
 		varDefs: composer.varDefs,
+		operationName: composer.operationName,
 		selectionSet: composer.selectionSet,
-		root: root,
-	});
 
-	// add DefraDB-specific helpers (defined here, not in composer)
-	Object.assign(prefixedAPI,{
+		// (but NOT root; defradb provides its own
+		// root() with `over` support)
+		root: root,
+
+		// add DefraDB-specific helpers (not in composer)
 		$a: make$a(composerInternals),
 		$p: make$p(composerInternals),
 		GROUP: GROUP,
@@ -84,14 +88,11 @@ function decorateDefraDB(prefixedAPI,composer,composerInternals) {
 		litFilters: litFilters,
 		varInputs: varInputs,
 		litInputs: litInputs,
-	});
+		actionPrefix,
 
-	// add collection() with CRUD + aggregate proxy
-	Object.assign(prefixedAPI,{
+		// add collection() with CRUD + aggregate proxy
 		collection: makeCollection(prefixedAPI,prefixedAPI),
 	});
-
-	return prefixedAPI;
 }
 
 
@@ -101,17 +102,29 @@ function decorateDefraDB(prefixedAPI,composer,composerInternals) {
 
 function translateDefraDBChunks(args) {
 	var collectionName = null;
+	var ap = "";
 
 	var out = args.map(chunk => {
 		if (
 			chunk &&
 			typeof chunk == "object" &&
-			!Array.isArray(chunk) &&
-			"collectionName" in chunk
+			!Array.isArray(chunk)
 		) {
-			var { collectionName: cn, ...rest } = chunk;
-			collectionName = cn;
-			return rest;
+			var modified = chunk;
+
+			if ("collectionName" in modified) {
+				let { collectionName: cn, ...rest } = modified;
+				collectionName = cn;
+				modified = rest;
+			}
+
+			if ("actionPrefix" in modified) {
+				let { actionPrefix: a, ...rest } = modified;
+				ap = a || "";
+				modified = rest;
+			}
+
+			return modified;
 		}
 		return chunk;
 	});
@@ -128,8 +141,30 @@ function translateDefraDBChunks(args) {
 	var hasOpName = out.some(c => c && typeof c == "object" && "operationName" in c);
 
 	var injected = {};
+
 	if (collectionName != null && !hasRoot) {
-		injected.root = root(collectionName).root;
+		// capture ap in closure — composer never sees actionPrefix
+		let capturedAP = ap;
+		let capturedCN = collectionName;
+		injected.root = {
+			field: capturedCN,
+			render(rootRenderCtx) {
+				var { namePrefix, nonPrefixedTypes, } = rootRenderCtx;
+				var rootFieldBase = (
+					nonPrefixedTypes.includes(capturedCN) ?
+						capturedCN :
+						`${namePrefix}${capturedCN}`
+				);
+				var rootField = `${capturedAP}${rootFieldBase}`;
+				var rootAlias = (
+					rootField !== `${capturedAP}${capturedCN}` ?
+						`${capturedAP}${capturedCN}` :
+						null
+				);
+				if (rootAlias === rootField) rootAlias = null;
+				return { rootField, rootAlias, };
+			},
+		};
 	}
 
 	if (concatTarget != null) {
@@ -155,6 +190,15 @@ function translateDefraDBChunks(args) {
 	}
 
 	return out;
+}
+
+
+// *****************************
+// actionPrefix(): produces { actionPrefix: .. }
+// *****************************
+
+function actionPrefix(ap) {
+	return { actionPrefix: ap, };
 }
 
 
@@ -194,17 +238,11 @@ function root(field,alias,over) {
 			alias: (alias != null && alias !== "" ? alias : null),
 			argsWrapper: makeOverWrapperToken(over),
 			render(rootRenderCtx) {
-				var { namePrefix, nonPrefixedTypes, action, } = rootRenderCtx;
-				var rootField = `${action}${field}`;
-				var rootAlias = (
-					alias != null && alias !== "" ?
-						(action != "" ? `${action}${alias}` : alias) :
-						null
-				);
+				var { namePrefix, nonPrefixedTypes, } = rootRenderCtx;
+				var rootField = field;
+				var rootAlias = (alias != null && alias !== "" ? alias : null);
 				// elide redundant alias
-				if (rootAlias === rootField) {
-					rootAlias = null;
-				}
+				if (rootAlias === rootField) rootAlias = null;
 				return { rootField, rootAlias, };
 			},
 		},
@@ -582,30 +620,30 @@ function makeCollection(prefixedAPI,defradbAPI) {
 			{
 				get(...args) {
 					return buildCollectionQuery({
-						kind: "query",
+						entryPoint: "query",
 						operationName: "Get",
-						action: "",
+						actionPrefix: "",
 					},args);
 				},
 				add(...args) {
 					return buildCollectionQuery({
-						kind: "mutation",
+						entryPoint: "mutation",
 						operationName: "Add",
-						action: "add_",
+						actionPrefix: "add_",
 					},args);
 				},
 				update(...args) {
 					return buildCollectionQuery({
-						kind: "mutation",
+						entryPoint: "mutation",
 						operationName: "Update",
-						action: "update_",
+						actionPrefix: "update_",
 					},args);
 				},
 				delete(...args) {
 					return buildCollectionQuery({
-						kind: "mutation",
+						entryPoint: "mutation",
 						operationName: "Delete",
-						action: "delete_",
+						actionPrefix: "delete_",
 					},args);
 				},
 			}
@@ -615,13 +653,12 @@ function makeCollection(prefixedAPI,defradbAPI) {
 
 		// ************************
 
-		function buildCollectionQuery({ kind, operationName, action, },combinators) {
-			var query = prefixedAPI.query(
+		function buildCollectionQuery({ entryPoint, operationName, actionPrefix, },combinators) {
+			var query = prefixedAPI[entryPoint](
 				{
 					collectionName,
-					kind,
 					operationName,
-					action,
+					actionPrefix,
 				},
 				...combinators
 			);
@@ -632,7 +669,6 @@ function makeCollection(prefixedAPI,defradbAPI) {
 			var query = prefixedAPI.query(
 				{
 					collectionName,
-					kind: "query",
 					operationName: opName,
 				},
 				defradbAPI.root(fnName,null,collectionName),
@@ -647,7 +683,7 @@ function makeCollection(prefixedAPI,defradbAPI) {
 				query.exec = function execQuery(vars) {
 					return (
 						prefixedAPI.exec(query,vars)
-							.then(result => result?.[query.resultName])
+							.then(result => result?.[query.resName])
 					);
 				};
 			}

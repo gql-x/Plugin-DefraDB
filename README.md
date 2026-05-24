@@ -28,7 +28,7 @@ Two primary goals motivate the design (inherited from Composer):
 
 1. **Reduce variable bookkeeping.** Annotate a variable's type at its use site; the builder hoists the declaration into the operation's parameter list and deduplicates automatically.
 
-2. **First-class dynamic composition.** Query fragments — filters, inputs, selection-sets, order clauses — are plain JS values that can be conditionally included, named, passed around, and combined using ordinary host-language logic. No string templating, no parameter-list maintenance.
+2. **First-class dynamic composition.** Query fragments (filters, inputs, selection-sets, order clauses) are plain JS values that can be conditionally included, named, passed around, and combined using ordinary host-language logic. No string templating, no parameter-list maintenance.
 
 A third design theme: meaning is conveyed by explicit names (`selectionSet`, `varFilters`, `litInputs`) rather than syntactic position. This trades raw-GraphQL positional convention for label-driven composition that can be reordered to foreground whatever matters most about a given query.
 
@@ -152,7 +152,7 @@ console.log(query.text);
 
 `createDefraDBComposer()` returns a plugin instance -- conventionally named `DQL` in these docs -- which exposes the entire DSL surface: helpers, builders, collection accessors, and optionally transport-defined methods; all helpers are exposed per-instance.
 
-The result of `DQL.collection(...).get(...)` (and other collection API methods) is a query-result object with `text`, `operationName`, and `resultName` properties; see [Composer Query Result](#composer-query-result) below.
+The result of `DQL.collection(...).get(...)` (and other collection API methods) is a query-result object with `text`, `opName`, `resName`, and `kind` properties; see [Composer Query Result](#composer-query-result) below.
 
 **NOTE:** For executing queries against a live DefraDB instance over HTTP, use [`@gql-x/plugin-defradb-transport-http`](https://github.com/gql-x/plugin-defradb-transport-http) instead; its entry point bundles this package's query-building surface with a transport that offers `exec()` and transaction handling methods.
 
@@ -160,7 +160,7 @@ The result of `DQL.collection(...).get(...)` (and other collection API methods) 
 
 This DSL provides two families of helpers, and both produce plain JS object structures that Composer consumes:
 
-1. **Option-key helpers** like `varFilters(..)`, `litInputs(..)`, `over(..)`, `groupBy(..)`, etc. Each produces a single-property object keyed by its option name. They're passed as variadic arguments to `get(..)` / `add(..)` / `queryBuilder(..)` etc.
+1. **Option-key helpers** like `varFilters(..)`, `litInputs(..)`, `over(..)`, `groupBy(..)`, etc. Each produces a single-property object keyed by its option name. They're passed as variadic arguments to `get(..)` / `add(..)` / `query(..)` etc.
 
     In other words, `varFilters(..)` produces `{ varFilters: .. }`.
 
@@ -204,7 +204,7 @@ import { createDefraDBComposer } from "@gql-x/plugin-defradb";
 var DQL = createDefraDBComposer({ namePrefix: "Dev_", });
 ```
 
-`DQL` is the plugin instance -- a DefraDB extended instance of the underlying GraphQL Composer. It includes all methods inherited from Composer (`query(..)`, `$f`, etc), as well as DefraDB-specific helpers.
+`DQL` is the plugin instance -- a DefraDB extended instance of the underlying GraphQL Composer. It includes all methods inherited from Composer (`raw(..)`, `query(..)`, `operationName(..)`, `$f`, etc), as well as DefraDB-specific helpers.
 
 ### `createDefraDBComposer(opts)`
 
@@ -214,13 +214,13 @@ Pass in an optional object with the following configurations to customize the in
 
 * `namePrefix` (string, default: `""`): sets the namespace prefix (e.g., `"Dev_"`)
 
-* `transport` (object, optional): a transport object whose methods are spread directly onto the returned instance. The plugin doesn't introspect the transport — whatever methods it provides become methods on the instance. Pass this when you have an execution layer you want the instance to expose; otherwise, the returned instance is purely a query-string builder.
+* `transport` (object, optional): a transport object whose methods are spread directly onto the returned instance. The plugin doesn't introspect the transport; whatever methods it provides become methods on the instance. Pass this when you have an execution layer you want the instance to expose; otherwise, the returned instance is purely a query-string builder.
 
 The return value of `createDefraDBComposer(..)` is a plugin instance.
 
 ### Plugin Instance
 
-In addition to the methods/helpers inherited from Composer, the plugin instance offers these two main methods (which can be fluently chained together; `DQL.prefix("Dev_").collection("User")...`):
+In addition to the methods/helpers inherited from Composer, the plugin instance offers these two main methods (which can be fluently chained together (`DQL.prefix("Dev_").collection("User")...`):
 
 * `prefix(..)`: returns a sibling plugin instance with a different prefix (the original is unchanged)
 
@@ -232,7 +232,7 @@ Additionally, the following DefraDB-specific helpers are included:
 
 * `$a`: helper proxy for field-level aggregate functions (`COUNT`, `SUM`, `MAX`, `MIN`, `AVG`, etc) in selection-sets
 
-* `varInputs(..)`, `litInputs(..)`, `varFilters(..)`, `litFilters(..)`, `root(..)`, `over(..)`, `groupBy(..)`, and `GROUP(..)`
+* `varInputs(..)`, `litInputs(..)`, `varFilters(..)`, `litFilters(..)`, `root(..)`, `over(..)`, `groupBy(..)`, `GROUP(..)`, and `actionPrefix(..)`
 
 **NOTE:** If `transport` is specified in the call to `createDefraDBComposer(..)`, it may define additional methods that will be provided on the plugin instance. For example, when paired with `@gql-x/plugin-defradb-transport-http`, the plugin instance additionally exposes `exec(..)`, `hasActiveTransaction()`, `startTransaction(..)`, `commitTransaction()`, and `discardTransaction()`. Refer to the transport package's documentation for more info.
 
@@ -269,25 +269,27 @@ DQL.collection("User").get({
 
 ### Composer Query Result
 
-Just like the inherited `query(..)` method, `get(..)`, `add(..)`, `update(..)`, `delete(..)`, and all `<AggregateFn>(..)` methods return a query-builder result object from Composer, which has the following properties:
+Just like the inherited `query(..)` / `mutation(..)` / etc methods, `get(..)`, `add(..)`, `update(..)`, `delete(..)`, and all `<AggregateFn>(..)` methods return a query-builder result object from Composer, which has the following properties:
 
 * `text`: the ready-to-execute query text
 
-* `operationName`: the operation name embedded in the query text (e.g., `GetUser`), to pass along to the DefraDB endpoint
+* `opName`: the operation name embedded in the query text (e.g., `GetUser`), to pass along to the DefraDB endpoint
 
-* `resultName`: the result set name (e.g., `User`)
+* `resName`: the result set name (e.g., `User`)
 
-Additionally, this query-builder result object has been decorated with a `tap(..)` method (for continued fluent chained-method calling):
+* `kind`: the kind of query (`"query"`, `"mutation"`, `"subscription"`)
+
+Additionally, this query-builder result object is decorated with a `tap(..)` method (for continued fluent chained-method calling):
 
 * `tap(fn)`: a function that will be invoked with the query builder result and then return the same context; often used to `console.log(query.text)` for debugging purposes
 
-The query result is purely a string-builder output that you can hand off to whatever execution layer you have.
+The query result is purely a string-builder output that you can hand off to whatever execution layer you prefer.
 
 Example:
 
 ```js
 var query = DQL.collection("User").get( /* .. */ );
-// { text: "..", operationName: "GetUser", .. }
+// { text: "..", opName: "GetUser", .. }
 
 DQL.collection("User")
     .get( /* query builder options */ )
@@ -298,7 +300,7 @@ DQL.collection("User")
 
 The `get(..)`, `add(..)`, `update(..)`, `delete(..)`, and `<AggregateFn>(..)` methods all accept variadic option-key helper calls (and/or options objects). The following defradb-specific query aspects can be specified, either via their corresponding option-key helper or as a property on an options object:
 
-* `varFilters` (option): specifies a variable-valued filter; a `filter` argument whose comparator values are variable type-defs that the builder hoists into the operation parameter list. Short-hand for the `filter` key inside composer's `varArgs`.
+* `varFilters` (option): specifies a variable-valued filter; a `filter` argument whose comparator values are variable type-defs that the builder hoists into the operation parameter list. Short-hand for the `filter` key inside Composer's `varArgs`.
 
     For example:
 
@@ -334,7 +336,7 @@ The `get(..)`, `add(..)`, `update(..)`, `delete(..)`, and `<AggregateFn>(..)` me
 
     Produces: `filter: { firstName: { _eq: "John" } }`.
 
-* `varInputs` (option): specifies a variable-valued input payload; an `input` argument whose values are variable type-defs hoisted into the operation parameter list. Short-hand for the `input` key inside composer's `varArgs`.
+* `varInputs` (option): specifies a variable-valued input payload; an `input` argument whose values are variable type-defs hoisted into the operation parameter list. Short-hand for the `input` key inside Composer's `varArgs`.
 
     For example:
 
@@ -397,6 +399,17 @@ The `get(..)`, `add(..)`, `update(..)`, `delete(..)`, and `<AggregateFn>(..)` me
     ```
 
     Produces: `MAX(GROUP: { field: Age })`.
+
+* `actionPrefix` (option): sets a prefix applied to the root field name and its alias in the rendered output. Normally handled automatically by the collection API: `add(..)`, `update(..)`, and `delete(..)` internally set `add_`, `update_`, and `delete_` respectively.
+
+    Exposed as a helper for cases where you're building a CRUD-style mutation directly via `mutation(..)` rather than through `collection()`. Most easily produced via the `actionPrefix(..)` option-key helper.
+
+    ```js
+        actionPrefix("add_")
+        // { actionPrefix: "add_" }
+    ```
+
+    When combined with `namePrefix`, the action prefix applies to both the rendered field name and the alias (e.g. `add_User: add_Dev_User`).
 
 The Composer-inherited helpers `varArgs`, `litArgs`, and `varDefs` are also accepted directly; see [Composer](https://github.com/gql-x/composer/blob/main/README.md) for more info. The shorthand options above (`varFilters` / `litFilters` / `varInputs` / `litInputs`) cover the most common DefraDB-specific use cases; fall back to the broader `varArgs` / `litArgs` for anything that falls outside those shapes.
 
@@ -541,7 +554,7 @@ The Composer-inherited helpers `varArgs`, `litArgs`, and `varDefs` are also acce
 
     **NOTE:** The key semantic distinction: `$p.any(..)` / `$p.all(..)` express "elements **where** [field] matches X" — the inner chunks reference sub-fields of relation objects. `$p.any.is(..)` / `$p.all.are(..)` express "elements **that are** X" — an identity check on scalar list elements themselves. The `.is(..)` / `.are(..)` forms invert field-centered chunks accordingly.
 
-The Composer-inherited helpers `$f`, `$t`, `$v`, and `$m` are also available on the plugin instance; see [Composer](https://github.com/gql-x/composer/blob/main/README.md) for more info.
+The Composer-inherited helpers `operationName`, `$f`, `$t`, `$v`, and `$m` are also available on the plugin instance; see [Composer](https://github.com/gql-x/composer/blob/main/README.md) for more info.
 
 ### Field-Level Selections
 
@@ -772,13 +785,13 @@ query CountBook {
 }
 ```
 
-**NOTE:** The collection name passed to `.collection(..)` is automatically used as the `over` target. The operation name is derived from the function name (`CountBook`, `MaxBook`, etc., with title-case formatting). The result's `resultName` is the bare function name (`COUNT`, `MAX`, etc.), since no alias is generated at this position.
+**NOTE:** The collection name passed to `.collection(..)` is automatically used as the `over` target. The operation name is derived from the function name (`CountBook`, `MaxBook`, etc., with title-case formatting). The result's `resName` is the bare function name (`COUNT`, `MAX`, etc.), since no alias is generated at this position.
 
 The result object is the same query-builder result as `get(..)` / `add(..)` / etc., decorated with `tap(..)`.
 
 ## Inherited Composer (Query Builder)
 
-If you want to build a DefraDB query whose shape doesn't map cleanly to `collection().get/add/update/delete` -- for example, a custom root field, or a query that mixes multiple operations -- you can drop down to the underlying Composer's `query(..)` directly.
+If you want to build a DefraDB query whose shape doesn't map cleanly to `collection().get/add/update/delete` -- for example, a custom root field, or a query that mixes multiple operations -- you can drop down to the underlying Composer's `raw(..)` / `query(..)` / etc directly.
 
 This plugin's `createDefraDBComposer(..)` exposes the same options surface (filters, inputs, aggregates, etc.) for it, plus a `root(..)` option-key helper that lets you specify the root field shape explicitly. See [Composer](https://github.com/gql-x/composer/blob/main/README.md) for more info.
 

@@ -38,12 +38,12 @@ test("collection() throws on invalid name", () => {
 
 test("get() produces query shape", () => {
 	var DQL = createDefraDBComposer({ namePrefix: "Dev_", });
-	var { text, operationName, resultName, kind, } = DQL.collection("User").get(
+	var { text, opName, resName, kind, } = DQL.collection("User").get(
 		DQL.selectionSet([ "_docID", "username", ])
 	);
 	assert.equal(kind,"query");
-	assert.equal(operationName,"GetUser");
-	assert.equal(resultName,"User");
+	assert.equal(opName,"GetUser");
+	assert.equal(resName,"User");
 	assert.ok(text.startsWith("query GetUser"));
 	assert.ok(normalize(text).includes("User: Dev_User { _docID username }"));
 });
@@ -60,10 +60,10 @@ test("get() with varFilters hoists var defs", () => {
 
 test("get() with no namePrefix has no alias", () => {
 	var DQL = createDefraDBComposer();
-	var { text, resultName, } = DQL.collection("User").get(
+	var { text, resName, } = DQL.collection("User").get(
 		DQL.selectionSet([ "_docID", ])
 	);
-	assert.equal(resultName,"User");
+	assert.equal(resName,"User");
 	assert.ok(normalize(text).includes("User { _docID }"));
 	assert.ok(!normalize(text).includes("User: User"));
 });
@@ -75,15 +75,21 @@ test("get() with no namePrefix has no alias", () => {
 
 test("add() produces mutation shape", () => {
 	var DQL = createDefraDBComposer({ namePrefix: "Dev_", });
-	var { text, operationName, resultName, kind, } = DQL.collection("User").add(
+	var { text, opName, resName, kind, } = DQL.collection("User").add(
 		DQL.varInputs(DQL.$v("username","String")),
 		DQL.selectionSet([ "_docID", ])
 	);
 	assert.equal(kind,"mutation");
-	assert.equal(operationName,"AddUser");
-	assert.equal(resultName,"add_User");
+	assert.equal(opName,"AddUser");
+	assert.equal(resName,"add_User");
 	assert.ok(text.startsWith("mutation AddUser($username:String)"));
 	assert.ok(text.includes("add_User: add_Dev_User(input:{username:$username})"));
+});
+
+test("add() kind cannot be overridden by chunk", () => {
+	var DQL = createDefraDBComposer();
+	var { kind } = DQL.collection("User").add({ kind: "query" });
+	assert.equal(kind, "mutation");
 });
 
 
@@ -93,12 +99,12 @@ test("add() produces mutation shape", () => {
 
 test("update() produces mutation shape with update_ action", () => {
 	var DQL = createDefraDBComposer({ namePrefix: "Dev_", });
-	var { text, operationName, kind, } = DQL.collection("User").update(
+	var { text, opName, kind, } = DQL.collection("User").update(
 		DQL.varInputs(DQL.$v("username","String")),
 		DQL.selectionSet([ "_docID", ])
 	);
 	assert.equal(kind,"mutation");
-	assert.equal(operationName,"UpdateUser");
+	assert.equal(opName,"UpdateUser");
 	assert.ok(text.startsWith("mutation UpdateUser($username:String)"));
 	assert.ok(text.includes("update_User: update_Dev_User(input:{username:$username})"));
 });
@@ -110,12 +116,12 @@ test("update() produces mutation shape with update_ action", () => {
 
 test("delete() produces mutation shape with delete_ action", () => {
 	var DQL = createDefraDBComposer({ namePrefix: "Dev_", });
-	var { text, operationName, kind, } = DQL.collection("User").delete(
+	var { text, opName, kind, } = DQL.collection("User").delete(
 		DQL.varFilters(DQL.$p.eq("_docID","ID")),
 		DQL.selectionSet([ "_docID", ])
 	);
 	assert.equal(kind,"mutation");
-	assert.equal(operationName,"DeleteUser");
+	assert.equal(opName,"DeleteUser");
 	assert.ok(text.startsWith("mutation DeleteUser($_docID:ID)"));
 	assert.ok(text.includes("delete_User: delete_Dev_User(filter:{_docID:{_eq:$_docID}})"));
 });
@@ -127,21 +133,21 @@ test("delete() produces mutation shape with delete_ action", () => {
 
 test("aggregate proxy: COUNT() produces query shape", () => {
 	var DQL = createDefraDBComposer({ namePrefix: "Dev_", });
-	var { text, operationName, resultName, kind, } = DQL.collection("User").COUNT();
+	var { text, opName, resName, kind, } = DQL.collection("User").COUNT();
 	assert.equal(kind,"query");
-	assert.equal(operationName,"CountUser");
-	assert.equal(resultName,"COUNT");
+	assert.equal(opName,"CountUser");
+	assert.equal(resName,"COUNT");
 	assert.ok(text.startsWith("query CountUser"));
 	assert.ok(text.includes("COUNT(Dev_User:{})"));
 });
 
 test("aggregate proxy: SUM() produces query shape", () => {
 	var DQL = createDefraDBComposer({ namePrefix: "Dev_", });
-	var { text, operationName, resultName, } = DQL.collection("User").SUM(
+	var { text, opName, resName, } = DQL.collection("User").SUM(
 		DQL.litArgs(DQL.$m("field","age"))
 	);
-	assert.equal(operationName,"SumUser");
-	assert.equal(resultName,"SUM");
+	assert.equal(opName,"SumUser");
+	assert.equal(resName,"SUM");
 	assert.ok(text.includes(`SUM(Dev_User:{field:"age"})`));
 });
 
@@ -211,7 +217,7 @@ test("query.exec() calls transport.exec() with the query", async () => {
 	var result = await q.exec({ foo: "bar", });
 	assert.equal(capturedArg,q,"transport.exec received the query object");
 	assert.deepEqual(capturedVars,{ foo: "bar", },"transport.exec received the vars");
-	assert.deepEqual(result,{ _docID: "abc123", },"exec returned result[resultName]");
+	assert.deepEqual(result,{ _docID: "abc123", },"exec returned result[resName]");
 });
 
 test("aggregate proxy query has .exec() when transport present", () => {
@@ -223,7 +229,7 @@ test("aggregate proxy query has .exec() when transport present", () => {
 	assert.equal(typeof q.exec,"function","has exec");
 });
 
-test("aggregate proxy query.exec() returns result[resultName]", async () => {
+test("aggregate proxy query.exec() returns result[resName]", async () => {
 	var transport = {
 		exec() {
 			return Promise.resolve({ COUNT: 42, });
@@ -252,8 +258,8 @@ test("prefix() returns api with working collection()", () => {
 test("aggregate proxy works through prefix() chain", () => {
 	var DQL = createDefraDBComposer({ namePrefix: "Dev_", });
 	var v2 = DQL.prefix("v2_");
-	var { text, resultName, } = v2.collection("User").COUNT();
-	assert.equal(resultName,"COUNT");
+	var { text, resName, } = v2.collection("User").COUNT();
+	assert.equal(resName,"COUNT");
 	assert.ok(text.includes("COUNT(v2_User:{})"));
 });
 

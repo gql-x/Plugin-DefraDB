@@ -5,12 +5,12 @@ import { createDefraDBComposer, } from "@gql-x/plugin-defradb";
 export const test = module("builder");
 
 var {
-	query,
+	raw, query, mutation, subscription,
 	root, selectionSet,
 	$f, $t, $v, $m, $p, $a,
 	varArgs, litArgs, varDefs,
 	varInputs, varFilters, litInputs, litFilters,
-	groupBy, GROUP, over,
+	groupBy, GROUP, over, operationName, actionPrefix,
 } = createDefraDBComposer();
 
 function normalize(str) {
@@ -18,84 +18,84 @@ function normalize(str) {
 }
 
 test("collectionName sets operation name and result name", () => {
-	var { text, operationName, resultName } = query({
+	var { text, opName, resName } = query({
 		collectionName: "User"
 	});
-	assert.equal(operationName, "User");
-	assert.equal(resultName, "User");
+	assert.equal(opName, "User");
+	assert.equal(resName, "User");
 	assert.ok(text.startsWith("query User"));
 });
 
 test("namePrefix applies alias and prefixes action field", () => {
-	var { text, operationName, resultName } = query({
+	var { text, opName, resName } = query({
 		collectionName: "User",
 		namePrefix: "Dev_"
 	});
-	assert.equal(operationName, "User");
-	assert.equal(resultName, "User");
+	assert.equal(opName, "User");
+	assert.equal(resName, "User");
 	assert.ok(text.includes("User: Dev_User"));
 });
 
 test("operationName null omits name when no var defs", () => {
-	var { text, operationName, } = query(
-		{ operationName: null, },
+	var { text, opName, } = query(
+		operationName(null),
 		root("User")
 	);
-	assert.equal(operationName, null);
+	assert.equal(opName, null);
 	assert.ok(text.startsWith("query {"));
 });
 
 test("root with over produces aggregate query", () => {
-	var { text, operationName, resultName, } = query(
-		{ namePrefix: "Dev_", operationName: null, },
+	var { text, opName, resName, } = query(
+		{ namePrefix: "Dev_", },
+		operationName(null),
 		root("COUNT","UserCount","User"),
 		selectionSet(null)	// special case: COUNT() has no sub-selection
 	);
-	assert.equal(operationName, null);
-	assert.equal(resultName, "UserCount");
+	assert.equal(opName, null);
+	assert.equal(resName, "UserCount");
 	assert.ok(text.includes("COUNT(Dev_User:{})"));
 });
 
 test("operationName prefix prepended to collectionName", () => {
-	var { text, operationName, } = query({
-		collectionName: "User",
-		operationName: "Get"
-	});
-	assert.equal(operationName, "GetUser");
+	var { text, opName, } = query(
+		{ collectionName: "User", },
+		operationName("Get")
+	);
+	assert.equal(opName, "GetUser");
 	assert.ok(text.startsWith("query GetUser"));
 });
 
 test("kind mutation", () => {
-	var { text, } = query({
+	var { text, } = mutation({
 		collectionName: "User",
-		kind: "mutation"
 	});
 	assert.ok(text.startsWith("mutation User"));
 });
 
 test("operationName null falls back to Query when var defs present", () => {
-	var { text, operationName, } = query(
-		{ operationName: null, },
+	var { text, opName, } = query(
+		operationName(null),
 		root("User"),
 		varDefs($v("foo","String"))
 	);
-	assert.equal(operationName, "Query");
+	assert.equal(opName, "Query");
 	assert.ok(text.startsWith("query Query("));
 });
 
 test("operationName null falls back to Mutation for mutation kind", () => {
-	var { text, operationName, } = query(
-		{ kind: "mutation", operationName: null, },
+	var { text, opName, } = mutation(
+		operationName(null),
 		root("User"),
 		varDefs($v("foo","String"))
 	);
-	assert.equal(operationName, "Mutation");
+	assert.equal(opName, "Mutation");
 	assert.ok(text.startsWith("mutation Mutation("));
 });
 
 test("varFilters hoists variable def and renders filter", () => {
 	var { text, } = query(
-		{ operationName: "Get", },
+		operationName("Get"),
 		root("User"),
 		varFilters($p.eq("username","String"))
 	);
@@ -105,7 +105,7 @@ test("varFilters hoists variable def and renders filter", () => {
 
 test("litFilters renders literal filter", () => {
 	var { text, } = query(
-		{ operationName: "Get", },
+		operationName("Get"),
 		root("User"),
 		litFilters($p.lit.eq("status","active"))
 	);
@@ -115,7 +115,7 @@ test("litFilters renders literal filter", () => {
 
 test("varFilters and litFilters merge into single filter arg", () => {
 	var { text, } = query(
-		{ operationName: "Get", },
+		operationName("Get"),
 		root("User"),
 		varFilters($p.eq("username","String")),
 		litFilters($p.lit.eq("status","active"))
@@ -125,8 +125,8 @@ test("varFilters and litFilters merge into single filter arg", () => {
 });
 
 test("varInputs hoists variable def and renders input", () => {
-	var { text, } = query(
-		{ operationName: "Add", kind: "mutation", },
+	var { text, } = mutation(
+		operationName("Add"),
 		root("User"),
 		varInputs($v("username","String"))
 	);
@@ -135,8 +135,8 @@ test("varInputs hoists variable def and renders input", () => {
 });
 
 test("litInputs renders literal input", () => {
-	var { text, } = query(
-		{ operationName: "Add", kind: "mutation", },
+	var { text, } = mutation(
+		operationName("Add"),
 		root("User"),
 		litInputs($m("status","active"))
 	);
@@ -145,8 +145,8 @@ test("litInputs renders literal input", () => {
 });
 
 test("varInputs and litInputs merge into single input arg", () => {
-	var { text, } = query(
-		{ operationName: "Add", kind: "mutation", },
+	var { text, } = mutation(
+		operationName("Add"),
 		root("User"),
 		varInputs($v("username","String")),
 		litInputs($m("status","active"))
@@ -157,7 +157,7 @@ test("varInputs and litInputs merge into single input arg", () => {
 
 test("varArgs renders non-filter/input variable args", () => {
 	var { text, } = query(
-		{ operationName: "Get", },
+		operationName("Get"),
 		root("User"),
 		varArgs($v("docID","userDocID","ID"))
 	);
@@ -165,17 +165,18 @@ test("varArgs renders non-filter/input variable args", () => {
 	assert.ok(text.includes("User(docID:$userDocID)"));
 });
 
-test("namePrefix resultName is unprefixed alias", () => {
-	var { resultName, } = query(
-		{ namePrefix: "Dev_", operationName: "Get", },
+test("namePrefix resName is unprefixed alias", () => {
+	var { resName, } = query(
+		{ namePrefix: "Dev_", },
+		operationName("Get"),
 		root("User")
 	);
-	assert.equal(resultName, "User");
+	assert.equal(resName, "User");
 });
 
 test("varDefs adds variable to parameter list without arg position", () => {
 	var { text, } = query(
-		{ operationName: "Get", },
+		operationName("Get"),
 		root("User"),
 		varDefs($v("sinceDate","DateTime"))
 	);
@@ -185,7 +186,7 @@ test("varDefs adds variable to parameter list without arg position", () => {
 
 test("litArgs renders literal arg", () => {
 	var { text, } = query(
-		{ operationName: "Get", },
+		operationName("Get"),
 		root("User"),
 		litArgs($m("limit",50))
 	);
@@ -195,7 +196,7 @@ test("litArgs renders literal arg", () => {
 
 test("variable deduplication — same var in two filter positions declared once", () => {
 	var { text, } = query(
-		{ operationName: "Get", },
+		operationName("Get"),
 		root("User"),
 		varFilters(
 			$p.eq("createdAt","sinceDate","DateTime"),
@@ -207,7 +208,7 @@ test("variable deduplication — same var in two filter positions declared once"
 
 test("varArgs 2-arg form", () => {
 	var { text, } = query(
-		{ operationName: "Get", },
+		operationName("Get"),
 		root("User"),
 		varArgs($v("limit","Int"))
 	);
@@ -216,17 +217,17 @@ test("varArgs 2-arg form", () => {
 });
 
 test("root with alias", () => {
-	var { text, resultName, } = query(
-		{ operationName: null, },
+	var { text, resName, } = query(
+		operationName(null),
 		root("COUNT","UserCount","User")
 	);
-	assert.equal(resultName, "UserCount");
+	assert.equal(resName, "UserCount");
 	assert.ok(text.includes("UserCount: COUNT"));
 });
 
 test("_docID in filter treated as field name not operator", () => {
 	var { text, } = query(
-		{ operationName: "Get", },
+		operationName("Get"),
 		root("User"),
 		varFilters($p.eq("_docID","ID"))
 	);
@@ -236,7 +237,7 @@ test("_docID in filter treated as field name not operator", () => {
 
 test("_docID in filter with rename-var treated as field name", () => {
 	var { text, } = query(
-		{ operationName: "Get", },
+		operationName("Get"),
 		root("User"),
 		varFilters($p.eq("_docID","targetDocID","ID"))
 	);
@@ -246,7 +247,7 @@ test("_docID in filter with rename-var treated as field name", () => {
 
 test("_docID inside _any treated as field name", () => {
 	var { text, } = query(
-		{ operationName: "Get", },
+		operationName("Get"),
 		root("User"),
 		varFilters(
 			$p("emails",
@@ -262,7 +263,7 @@ test("_docID inside _any treated as field name", () => {
 
 test("_docID inside _not treated as field name", () => {
 	var { text, } = query(
-		{ operationName: "Get", },
+		operationName("Get"),
 		root("User"),
 		varFilters(
 			$p.not(
@@ -276,7 +277,7 @@ test("_docID inside _not treated as field name", () => {
 
 test("_docID inside _or treated as field name", () => {
 	var { text, } = query(
-		{ operationName: "Get", },
+		operationName("Get"),
 		root("User"),
 		varFilters(
 			$p.or(
@@ -291,7 +292,7 @@ test("_docID inside _or treated as field name", () => {
 
 test("_or in filter renders array of filter objects", () => {
 	var { text, } = query(
-		{ operationName: "Get", },
+		operationName("Get"),
 		root("User"),
 		varFilters(
 			$p.or(
@@ -306,7 +307,7 @@ test("_or in filter renders array of filter objects", () => {
 
 test("_and in filter renders array of filter objects", () => {
 	var { text, } = query(
-		{ operationName: "Get", },
+		operationName("Get"),
 		root("User"),
 		varFilters(
 			$p.and(
@@ -321,7 +322,7 @@ test("_and in filter renders array of filter objects", () => {
 
 test("_not in filter renders merged object", () => {
 	var { text, } = query(
-		{ operationName: "Get", },
+		operationName("Get"),
 		root("User"),
 		varFilters(
 			$p.not(
@@ -336,7 +337,7 @@ test("_not in filter renders merged object", () => {
 
 test("_or nested inside _not", () => {
 	var { text, } = query(
-		{ operationName: "Get", },
+		operationName("Get"),
 		root("User"),
 		varFilters(
 			$p.not(
@@ -353,7 +354,7 @@ test("_or nested inside _not", () => {
 
 test("_and with nested _or", () => {
 	var { text, } = query(
-		{ operationName: "Get", },
+		operationName("Get"),
 		root("User"),
 		varFilters(
 			$p.and(
@@ -371,7 +372,7 @@ test("_and with nested _or", () => {
 
 test("_not inside _or", () => {
 	var { text, } = query(
-		{ operationName: "Get", },
+		operationName("Get"),
 		root("User"),
 		varFilters(
 			$p.or(
@@ -388,7 +389,7 @@ test("_not inside _or", () => {
 
 test("combinators mixed with regular field filters", () => {
 	var { text, } = query(
-		{ operationName: "Get", },
+		operationName("Get"),
 		root("User"),
 		varFilters(
 			$p.eq("username","String"),
@@ -407,7 +408,7 @@ test("combinators mixed with regular field filters", () => {
 
 test("_or with 3-arg rename form deduplicates variable", () => {
 	var { text, } = query(
-		{ operationName: "Get", },
+		operationName("Get"),
 		root("User"),
 		varFilters(
 			$p.or(
@@ -422,7 +423,7 @@ test("_or with 3-arg rename form deduplicates variable", () => {
 
 test("_and with 3-arg rename form", () => {
 	var { text, } = query(
-		{ operationName: "Get", },
+		operationName("Get"),
 		root("User"),
 		varFilters(
 			$p.and(
@@ -437,7 +438,7 @@ test("_and with 3-arg rename form", () => {
 
 test("_not with 3-arg rename form", () => {
 	var { text, } = query(
-		{ operationName: "Get", },
+		operationName("Get"),
 		root("User"),
 		varFilters(
 			$p.not(
@@ -452,7 +453,7 @@ test("_not with 3-arg rename form", () => {
 
 test("_any.is scalar list renders correctly", () => {
 	var { text, } = query(
-		{ operationName: "Get", },
+		operationName("Get"),
 		root("User"),
 		varFilters(
 			$p("tags",
@@ -466,7 +467,7 @@ test("_any.is scalar list renders correctly", () => {
 
 test("_all.are scalar list renders correctly", () => {
 	var { text, } = query(
-		{ operationName: "Get", },
+		operationName("Get"),
 		root("User"),
 		varFilters(
 			$p("tags",
@@ -480,7 +481,7 @@ test("_all.are scalar list renders correctly", () => {
 
 test("_any relation field multiple conditions", () => {
 	var { text, } = query(
-		{ operationName: "Get", },
+		operationName("Get"),
 		root("User"),
 		varFilters(
 			$p("emails",
@@ -497,7 +498,7 @@ test("_any relation field multiple conditions", () => {
 
 test("_any relation field with nested _and", () => {
 	var { text, } = query(
-		{ operationName: "Get", },
+		operationName("Get"),
 		root("User"),
 		varFilters(
 			$p("emails",
@@ -517,7 +518,7 @@ test("_any relation field with nested _and", () => {
 
 test("_all relation field with nested _or", () => {
 	var { text, } = query(
-		{ operationName: "Get", },
+		operationName("Get"),
 		root("User"),
 		varFilters(
 			$p("emails",
@@ -537,7 +538,7 @@ test("_all relation field with nested _or", () => {
 
 test("$t bare token in litArgs renders without quotes", () => {
 	var { text, } = query(
-		{ operationName: "Get", },
+		operationName("Get"),
 		root("User"),
 		litArgs($m("order",$m("createdAt",$t.DESC)))
 	);
@@ -546,7 +547,7 @@ test("$t bare token in litArgs renders without quotes", () => {
 
 test("$t.$varName manual variable reference in litArgs", () => {
 	var { text, } = query(
-		{ operationName: "Get", },
+		operationName("Get"),
 		root("User"),
 		varDefs($v("sinceDate","DateTime")),
 		litFilters($p.lit.gt("createdAt",$t.$sinceDate))
@@ -556,8 +557,8 @@ test("$t.$varName manual variable reference in litArgs", () => {
 });
 
 test("$t bare token in litInputs", () => {
-	var { text, } = query(
-		{ operationName: "Add", kind: "mutation", },
+	var { text, } = mutation(
+		operationName("Add"),
 		root("User"),
 		litInputs($m("status",$t.ACTIVE))
 	);
@@ -566,8 +567,8 @@ test("$t bare token in litInputs", () => {
 });
 
 test("$t.$varName manual variable reference in litInputs", () => {
-	var { text, } = query(
-		{ operationName: "Add", kind: "mutation", },
+	var { text, } = mutation(
+		operationName("Add"),
 		root("User"),
 		varDefs($v("defaultStatus","String")),
 		litInputs($m("status",$t.$defaultStatus))
@@ -578,7 +579,7 @@ test("$t.$varName manual variable reference in litInputs", () => {
 
 test("selectionSet renders string fields", () => {
 	var { text, } = query(
-		{ operationName: "Get", },
+		operationName("Get"),
 		root("User"),
 		selectionSet("_docID","username","createdAt")
 	);
@@ -587,7 +588,7 @@ test("selectionSet renders string fields", () => {
 
 test("selectionSet $f alias", () => {
 	var { text, } = query(
-		{ operationName: "Get", },
+		operationName("Get"),
 		root("User"),
 		selectionSet(
 			$f`ownerEmail``email`
@@ -598,7 +599,7 @@ test("selectionSet $f alias", () => {
 
 test("selectionSet null omits block", () => {
 	var { text, } = query(
-		{ operationName: "Get", },
+		operationName("Get"),
 		root("User"),
 		selectionSet($f.noSelection)
 	);
@@ -607,7 +608,7 @@ test("selectionSet null omits block", () => {
 
 test("selectionSet $f with field-level varFilters hoists var def", () => {
 	var { text, } = query(
-		{ operationName: "Get", },
+		operationName("Get"),
 		root("User"),
 		selectionSet(
 			$m(
@@ -624,7 +625,7 @@ test("selectionSet $f with field-level varFilters hoists var def", () => {
 
 test("selectionSet COUNT aggregate with over and noSelection", () => {
 	var { text, } = query(
-		{ operationName: "Get", },
+		operationName("Get"),
 		root("User"),
 		selectionSet(
 			$f`totalBooks ${$a.COUNT(over("books"))}`
@@ -635,7 +636,7 @@ test("selectionSet COUNT aggregate with over and noSelection", () => {
 
 test("selectionSet COUNT aggregate with over and varFilters", () => {
 	var { text, } = query(
-		{ operationName: "Get", },
+		operationName("Get"),
 		root("User"),
 		selectionSet(
 			$f`publishedBooks ${$a.COUNT(
@@ -650,7 +651,7 @@ test("selectionSet COUNT aggregate with over and varFilters", () => {
 
 test("$f field-level litArgs renders correctly", () => {
 	var { text, } = query(
-		{ operationName: "Get", },
+		operationName("Get"),
 		root("User"),
 		selectionSet(
 			$m(
@@ -664,7 +665,7 @@ test("$f field-level litArgs renders correctly", () => {
 
 test("$f field-level varArgs hoists var def", () => {
 	var { text, } = query(
-		{ operationName: "Get", },
+		operationName("Get"),
 		root("User"),
 		selectionSet(
 			$m(
@@ -679,7 +680,7 @@ test("$f field-level varArgs hoists var def", () => {
 
 test("selectionSet legacy string-key sub-selection", () => {
 	var { text, } = query(
-		{ operationName: "Get", },
+		operationName("Get"),
 		root("User"),
 		selectionSet(
 			{ books: [ "title", "author" ] }
@@ -690,7 +691,7 @@ test("selectionSet legacy string-key sub-selection", () => {
 
 test("$f field-level litFilters renders correctly", () => {
 	var { text, } = query(
-		{ operationName: "Get", },
+		operationName("Get"),
 		root("User"),
 		selectionSet(
 			$m(
@@ -706,7 +707,7 @@ test("$f field-level litFilters renders correctly", () => {
 
 test("variable deduplication across operation and field level", () => {
 	var { text, } = query(
-		{ operationName: "Get", },
+		operationName("Get"),
 		root("User"),
 		varFilters($p.eq("createdAt","sinceDate","DateTime")),
 		selectionSet(
@@ -722,6 +723,44 @@ test("variable deduplication across operation and field level", () => {
 	assert.ok(normalize(text).includes("books(filter:{publishedAt:{_eq:$sinceDate}}) { title }"));
 });
 
+test("subscription() presets kind:subscription", () => {
+	var { kind, text } = subscription({
+		collectionName: "User",
+	});
+	assert.equal(kind, "subscription");
+	assert.ok(text.startsWith("subscription User"));
+});
+
+test("raw() with kind:subscription translates collectionName chunks", () => {
+	var { kind, text } = raw({
+		kind: "subscription",
+		collectionName: "User",
+	});
+	assert.equal(kind, "subscription");
+	assert.ok(text.startsWith("subscription User"));
+});
+
+test("actionPrefix chunk applies prefix to root field", () => {
+	var { text, resName, } = mutation(
+		{ collectionName: "User", },
+		actionPrefix("add_")
+	);
+	assert.equal(resName, "add_User");
+	assert.ok(normalize(text).startsWith("mutation User { add_User {"));
+});
+
+test("actionPrefix chunk with namePrefix applies both", () => {
+	var { text, resName, } = mutation(
+		{
+			collectionName: "User",
+			namePrefix: "Dev_",
+		},
+		actionPrefix("add_")
+	);
+	assert.equal(resName, "add_User");
+	assert.ok(text.includes("add_User: add_Dev_User"));
+});
+
 
 // ************************
 // $a — aggregates in selectionSet
@@ -729,7 +768,7 @@ test("variable deduplication across operation and field level", () => {
 
 test("$a.COUNT bare in selectionSet (no alias, no over)", () => {
 	var { text, } = query(
-		{ operationName: "Get", },
+		operationName("Get"),
 		root("User"),
 		selectionSet($a.COUNT())
 	);
@@ -738,7 +777,7 @@ test("$a.COUNT bare in selectionSet (no alias, no over)", () => {
 
 test("$a.COUNT bare in selectionSet with over", () => {
 	var { text, } = query(
-		{ operationName: "Get", },
+		operationName("Get"),
 		root("User"),
 		selectionSet($a.COUNT(over("books")))
 	);
@@ -747,7 +786,7 @@ test("$a.COUNT bare in selectionSet with over", () => {
 
 test("$a.COUNT with over and varFilters", () => {
 	var { text, } = query(
-		{ operationName: "Get", },
+		operationName("Get"),
 		root("User"),
 		selectionSet(
 			$a.COUNT(
@@ -762,7 +801,7 @@ test("$a.COUNT with over and varFilters", () => {
 
 test("$a.COUNT with over and litFilters", () => {
 	var { text, } = query(
-		{ operationName: "Get", },
+		operationName("Get"),
 		root("User"),
 		selectionSet(
 			$a.COUNT(
@@ -776,7 +815,7 @@ test("$a.COUNT with over and litFilters", () => {
 
 test("$a.SUM with over and litArgs field", () => {
 	var { text, } = query(
-		{ operationName: "Get", },
+		operationName("Get"),
 		root("User"),
 		selectionSet(
 			$a.SUM(
@@ -790,7 +829,7 @@ test("$a.SUM with over and litArgs field", () => {
 
 test("$f wraps $a.COUNT to provide alias", () => {
 	var { text, } = query(
-		{ operationName: "Get", },
+		operationName("Get"),
 		root("User"),
 		selectionSet(
 			$f`publishedBooks ${$a.COUNT(
@@ -805,7 +844,7 @@ test("$f wraps $a.COUNT to provide alias", () => {
 
 test("$f wraps $a.SUM to provide alias", () => {
 	var { text, } = query(
-		{ operationName: "Get", },
+		operationName("Get"),
 		root("User"),
 		selectionSet(
 			$f`totalRating ${$a.SUM(
@@ -819,7 +858,7 @@ test("$f wraps $a.SUM to provide alias", () => {
 
 test("multiple $a.* items in one selectionSet", () => {
 	var { text, } = query(
-		{ operationName: "Get", },
+		operationName("Get"),
 		root("User"),
 		selectionSet(
 			"username",
@@ -842,7 +881,7 @@ test("multiple $a.* items in one selectionSet", () => {
 
 test("$a.COUNT variable deduplication across multiple aggregates", () => {
 	var { text, } = query(
-		{ operationName: "Get", },
+		operationName("Get"),
 		root("User"),
 		selectionSet(
 			$f`recentBooks ${$a.COUNT(
@@ -865,7 +904,7 @@ test("$a.COUNT variable deduplication across multiple aggregates", () => {
 
 test("groupBy renders bare token field names (not quoted)", () => {
 	var { text, } = query(
-		{ operationName: "Get", },
+		operationName("Get"),
 		root("User"),
 		groupBy("Age"),
 		selectionSet("Age")
@@ -876,7 +915,7 @@ test("groupBy renders bare token field names (not quoted)", () => {
 
 test("groupBy multiple fields renders array of bare tokens", () => {
 	var { text, } = query(
-		{ operationName: "Get", },
+		operationName("Get"),
 		root("User"),
 		groupBy("Age","Country"),
 		selectionSet("Age","Country")
@@ -886,7 +925,7 @@ test("groupBy multiple fields renders array of bare tokens", () => {
 
 test("groupBy with empty array renders groupBy:[]", () => {
 	var { text, } = query(
-		{ operationName: "Get", },
+		operationName("Get"),
 		root("User"),
 		groupBy(),
 		selectionSet("_docID")
@@ -896,7 +935,7 @@ test("groupBy with empty array renders groupBy:[]", () => {
 
 test("GROUP renders field as bare token", () => {
 	var { text, } = query(
-		{ operationName: "Get", },
+		operationName("Get"),
 		root("User"),
 		selectionSet(
 			$a.MAX(GROUP("Age"))
@@ -908,7 +947,7 @@ test("GROUP renders field as bare token", () => {
 
 test("GROUP with varFilters hoists var def", () => {
 	var { text, } = query(
-		{ operationName: "Get", },
+		operationName("Get"),
 		root("User"),
 		selectionSet(
 			$f`maxAge ${$a.MAX(GROUP("Age",varFilters($p.gt("Age","Int"))))}`
@@ -920,7 +959,7 @@ test("GROUP with varFilters hoists var def", () => {
 
 test("GROUP with litFilters renders filter inline", () => {
 	var { text, } = query(
-		{ operationName: "Get", },
+		operationName("Get"),
 		root("User"),
 		selectionSet(
 			$a.MAX(GROUP("Age",litFilters($p.lit.gt("Age",26))))
@@ -931,7 +970,7 @@ test("GROUP with litFilters renders filter inline", () => {
 
 test("groupBy and GROUP together — full grouped aggregate query", () => {
 	var { text, } = query(
-		{ operationName: "Get", },
+		operationName("Get"),
 		root("User"),
 		groupBy("Age"),
 		selectionSet(
@@ -952,12 +991,12 @@ test("groupBy and GROUP together — full grouped aggregate query", () => {
 
 test("$f() parity: alias + $a token with GROUP", () => {
 	var tagQuery = query(
-		{ operationName: "Get", },
+		operationName("Get"),
 		root("User"),
 		selectionSet($f`maxAge ${$a.MAX(GROUP("Age",varFilters($p.gt("Age","Int"))))}`)
 	);
 	var fnQuery = query(
-		{ operationName: "Get", },
+		operationName("Get"),
 		root("User"),
 		selectionSet($f("maxAge",$a.MAX(GROUP("Age",varFilters($p.gt("Age","Int"))))))
 	);
@@ -965,7 +1004,7 @@ test("$f() parity: alias + $a token with GROUP", () => {
 });
 
 test("NON_PREFIXED_TYPES collection name skips prefix", () => {
-	var { text, } = query({
+	var { text, } = raw({
 		collectionName: "_commits",
 		namePrefix: "Dev_",
 		operationName: "Get",
@@ -976,14 +1015,14 @@ test("NON_PREFIXED_TYPES collection name skips prefix", () => {
 
 test("invalid GQL name for root over throws", () => {
 	assert.throws(() => query(
-		{ operationName: null, },
+		operationName(null),
 		root("COUNT","myCount","bad-name")
 	));
 });
 
 test("$t token accepted as type in $p.eq", () => {
 	var { text, } = query(
-		{ operationName: "Get", },
+		operationName("Get"),
 		root("User"),
 		varFilters($p.eq("username",$t.String))
 	);
@@ -995,77 +1034,66 @@ test("$t token accepted as type in $p.eq", () => {
 // ************************
 
 test("root over-form with null alias renders without alias", () => {
-	var { text, resultName, } = query(
-		{ namePrefix: "Dev_", operationName: null, },
+	var { text, resName, } = query(
+		{ namePrefix: "Dev_", },
+		operationName(null),
 		root("COUNT",null,"User"),
 		selectionSet(null)
 	);
-	assert.equal(resultName, "COUNT");
+	assert.equal(resName, "COUNT");
 	assert.ok(text.includes("COUNT(Dev_User:{})"));
 	assert.ok(!text.includes("COUNT:"));
 });
 
 test("root over-form with empty-string alias renders without alias", () => {
-	var { text, resultName, } = query(
-		{ namePrefix: "Dev_", operationName: null, },
+	var { text, resName, } = query(
+		{ namePrefix: "Dev_", },
+		operationName(null),
 		root("COUNT","","User"),
 		selectionSet(null)
 	);
-	assert.equal(resultName, "COUNT");
+	assert.equal(resName, "COUNT");
 	assert.ok(text.includes("COUNT(Dev_User:{})"));
 	assert.ok(!text.includes("COUNT:"));
 });
 
 test("root over-form with undefined alias renders without alias", () => {
-	var { text, resultName, } = query(
-		{ namePrefix: "Dev_", operationName: null, },
+	var { text, resName, } = query(
+		{ namePrefix: "Dev_", },
+		operationName(null),
 		root("COUNT",undefined,"User"),
 		selectionSet(null)
 	);
-	assert.equal(resultName, "COUNT");
+	assert.equal(resName, "COUNT");
 	assert.ok(text.includes("COUNT(Dev_User:{})"));
 	assert.ok(!text.includes("COUNT:"));
 });
 
 test("root over-form with alias equal to field elides redundant alias", () => {
-	var { text, resultName, } = query(
-		{ namePrefix: "Dev_", operationName: null, },
+	var { text, resName, } = query(
+		{ namePrefix: "Dev_", },
+		operationName(null),
 		root("COUNT","COUNT","User"),
 		selectionSet(null)
 	);
-	assert.equal(resultName, "COUNT");
+	assert.equal(resName, "COUNT");
 	assert.ok(text.includes("COUNT(Dev_User:{})"));
 	assert.ok(!text.includes("COUNT: COUNT"));
 });
 
-test("root over-form with action prefix applies to both field and alias", () => {
-	var { text, resultName, } = query(
-		{
-			namePrefix: "Dev_",
-			operationName: null,
-			kind: "mutation",
-			action: "add_",
-		},
-		root("COUNT","userCount","User"),
-		selectionSet(null)
-	);
-	assert.equal(resultName, "add_userCount");
-	assert.ok(text.includes("add_userCount: add_COUNT(Dev_User:{})"));
-});
-
 test("root 2-arg form is symmetric with composer's root(field, alias)", () => {
-	var { text, resultName, } = query(
-		{ operationName: null, },
+	var { text, resName, } = query(
+		operationName(null),
 		root("user","currentUser"),
 		selectionSet("_docID")
 	);
-	assert.equal(resultName, "currentUser");
+	assert.equal(resName, "currentUser");
 	assert.ok(normalize(text).includes("currentUser: user { _docID }"));
 });
 
 test("root over-form throws on non-string alias", () => {
 	assert.throws(() => query(
-		{ operationName: null, },
+		operationName(null),
 		root("COUNT",42,"User")
 	));
 });

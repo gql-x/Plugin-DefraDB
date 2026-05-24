@@ -13,10 +13,23 @@ var {
 	GROUP,
 	root,
 	over,
+	actionPrefix,
 	$p,
 	$m,
 	$v,
 } = createDefraDBComposer();
+
+
+// ************************
+// actionPrefix
+// ************************
+
+test("actionPrefix produces { actionPrefix: ... }", () => {
+	assert.deepEqual(
+		actionPrefix("add_"),
+		{ actionPrefix: "add_" }
+	);
+});
 
 
 // ************************

@@ -16,15 +16,13 @@ function normalize(str) {
 test("createDefraDBComposer() returns just the api", () => {
 	var DQL = createDefraDBComposer();
 	assert.ok(!!DQL,"has api");
-	assert.equal(typeof DQL.query,"function","has query()");
-	assert.equal(typeof DQL.prefix,"function","has prefix()");
 });
 
-test("registerPlugin() returns { api, internals }", () => {
+test("registerPlugin() returns { api, _internals }", () => {
 	var reg = registerPlugin();
 	assert.ok(!!reg.api,"has api");
-	assert.ok(!!reg.internals,"has internals");
-	assert.ok(!!reg.internals.composer,"has composer internals");
+	assert.ok(!!reg._internals,"has _internals");
+	assert.ok(!!reg._internals.composer,"has composer _internals");
 });
 
 test("createDefraDBComposer() with no config", () => {
@@ -42,6 +40,14 @@ test("createDefraDBComposer() with no config", () => {
 // api surface
 // ************************
 
+test("api exposes builder entry points", () => {
+	var DQL = createDefraDBComposer();
+	assert.equal(typeof DQL.raw,"function","raw");
+	assert.equal(typeof DQL.query,"function","query");
+	assert.equal(typeof DQL.mutation,"function","mutation");
+	assert.equal(typeof DQL.subscription,"function","subscription");
+});
+
 test("api exposes composer helpers", () => {
 	var DQL = createDefraDBComposer();
 	assert.equal(typeof DQL.$f,"function","$f");
@@ -53,6 +59,7 @@ test("api exposes composer helpers", () => {
 	assert.equal(typeof DQL.varDefs,"function","varDefs");
 	assert.equal(typeof DQL.selectionSet,"function","selectionSet");
 	assert.equal(typeof DQL.root,"function","root");
+	assert.equal(typeof DQL.operationName,"function","operationName");
 });
 
 test("api exposes defradb-specific helpers", () => {
@@ -68,9 +75,47 @@ test("api exposes defradb-specific helpers", () => {
 	assert.equal(typeof DQL.litInputs,"function","litInputs");
 });
 
-test("api exposes collection()", () => {
+test("api exposes prefix() + collection()", () => {
 	var DQL = createDefraDBComposer();
+	assert.equal(typeof DQL.prefix,"function","prefix");
 	assert.equal(typeof DQL.collection,"function","collection");
+});
+
+
+// ************************
+// other inherited builders
+// ************************
+
+test("mutation() presets kind:mutation with prefix", () => {
+	var DQL = createDefraDBComposer({ namePrefix: "Dev_", });
+	var { kind, text } = DQL.mutation({
+		root: { field: "User" },
+		operationName: null,
+		selectionSet: [ "_docID" ],
+	});
+	assert.equal(kind, "mutation");
+	assert.ok(normalize(text).startsWith("mutation { User: Dev_User"));
+});
+
+test("subscription() presets kind:subscription", () => {
+	var DQL = createDefraDBComposer();
+	var { kind, text } = DQL.subscription({
+		root: { field: "User" },
+		operationName: null,
+		selectionSet: [ "_docID" ],
+	});
+	assert.equal(kind, "subscription");
+	assert.ok(text.startsWith("subscription {"));
+});
+
+test("mutation() kind cannot be overridden by chunk", () => {
+	var DQL = createDefraDBComposer();
+	var { kind } = DQL.mutation({
+		root: { field: "User" },
+		kind: "query",
+		selectionSet: [ "_docID" ],
+	});
+	assert.equal(kind, "mutation");
 });
 
 
@@ -295,13 +340,13 @@ test("$a tokens from one instance not recognized by another", () => {
 
 
 // ************************
-// internals
+// _internals
 // ************************
 
-test("internals.composer exposes makeFieldToken etc", () => {
-	var { internals, } = registerPlugin();
-	assert.equal(typeof internals.composer.makeFieldToken,"function","makeFieldToken");
-	assert.equal(typeof internals.composer.is$fToken,"function","is$fToken");
-	assert.equal(typeof internals.composer.get$fSymbol,"function","get$fSymbol");
-	assert.ok(!!internals.composer.$fMeta,"$fMeta");
+test("_internals.composer exposes makeFieldToken etc", () => {
+	var { _internals, } = registerPlugin();
+	assert.equal(typeof _internals.composer.makeFieldToken,"function","makeFieldToken");
+	assert.equal(typeof _internals.composer.is$fToken,"function","is$fToken");
+	assert.equal(typeof _internals.composer.get$fSymbol,"function","get$fSymbol");
+	assert.ok(!!_internals.composer.$fMeta,"$fMeta");
 });

@@ -1,7 +1,7 @@
 {
 	"name": "@gql-x/plugin-defradb",
 	"description": "DefraDB extensions for GraphQL Composer",
-	"version": "0.0.0-pre-202605232304",
+	"version": "0.0.0-pre-202605241316",
 	"main": "./src/defradb.js",
 	"type": "module",
 	"scripts": {
