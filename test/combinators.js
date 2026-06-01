@@ -43,7 +43,7 @@ test("varFilters produces { varFilters: ... }", () => {
 	);
 });
 
-test("varFilters merges multiple chunks", () => {
+test("varFilters merges multiple units", () => {
 	assert.deepEqual(
 		varFilters(
 			$p.eq("foo","String"),
@@ -65,7 +65,7 @@ test("litFilters produces { litFilters: ... }", () => {
 	);
 });
 
-test("litFilters merges multiple chunks", () => {
+test("litFilters merges multiple units", () => {
 	assert.deepEqual(
 		litFilters(
 			$p.lit.eq("isEnabled",true),
@@ -87,7 +87,7 @@ test("varInputs produces { varInputs: ... }", () => {
 	);
 });
 
-test("varInputs merges multiple chunks", () => {
+test("varInputs merges multiple units", () => {
 	assert.deepEqual(
 		varInputs(
 			$v("foo","String"),
@@ -109,7 +109,7 @@ test("litInputs produces { litInputs: ... }", () => {
 	);
 });
 
-test("litInputs merges multiple chunks", () => {
+test("litInputs merges multiple units", () => {
 	assert.deepEqual(
 		litInputs(
 			$m("foo","hello"),
@@ -154,7 +154,7 @@ test("over throws with no args", () => {
 	assert.throws(() => over());
 });
 
-test("over with valid name produces argsWrapper chunk", () => {
+test("over with valid name produces argsWrapper unit", () => {
 	var result = over("User");
 	assert.ok(result.argsWrapper && typeof result.argsWrapper.render == "function");
 });

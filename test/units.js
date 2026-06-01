@@ -11,7 +11,7 @@ var { $p, $a, $m, } = createDefraDBComposer();
 // $p — compose
 // ************************
 
-test("$p merges multiple chunks", () => {
+test("$p merges multiple units", () => {
 	assert.deepEqual(
 		$p(
 			$p.eq("foo","String"),
@@ -21,7 +21,7 @@ test("$p merges multiple chunks", () => {
 	);
 });
 
-test("$p ignores null chunks", () => {
+test("$p ignores null units", () => {
 	assert.deepEqual(
 		$p(
 			$p.eq("foo","String"),
@@ -32,7 +32,7 @@ test("$p ignores null chunks", () => {
 	);
 });
 
-test("$p scoped compose nests chunks under field", () => {
+test("$p scoped compose nests units under field", () => {
 	assert.deepEqual(
 		$p("user",
 			$p.eq("foo","String"),
@@ -101,7 +101,7 @@ test("$p.neq 2-arg form", () => {
 // $p — and/or/not
 // ************************
 
-test("$p.or wraps chunks in array", () => {
+test("$p.or wraps units in array", () => {
 	assert.deepEqual(
 		$p.or(
 			$p.eq("foo","String"),
@@ -114,7 +114,7 @@ test("$p.or wraps chunks in array", () => {
 	);
 });
 
-test("$p.and wraps chunks in array", () => {
+test("$p.and wraps units in array", () => {
 	assert.deepEqual(
 		$p.and(
 			$p.eq("foo","String"),
@@ -127,7 +127,7 @@ test("$p.and wraps chunks in array", () => {
 	);
 });
 
-test("$p.not merges chunks into object", () => {
+test("$p.not merges units into object", () => {
 	assert.deepEqual(
 		$p.not(
 			$p.eq("foo","String"),
@@ -189,28 +189,28 @@ test("$p.lit.eq with null value", () => {
 // $p — from
 // ************************
 
-test("$p.any.is with 1-arg operator-shaped chunk passes through", () => {
+test("$p.any.is with 1-arg operator-shaped unit passes through", () => {
 	assert.deepEqual(
 		$p.any.is($p.in("[String]")),
 		{ _any: { _in: "[String]" } }
 	);
 });
 
-test("$p.any.is with 2-arg field-centered chunk inverts", () => {
+test("$p.any.is with 2-arg field-centered unit inverts", () => {
 	assert.deepEqual(
 		$p.any.is($p.in("myTags","[String]")),
 		{ _any: { _in: { myTags: "[String]" } } }
 	);
 });
 
-test("$p.all.are with 1-arg operator-shaped chunk passes through", () => {
+test("$p.all.are with 1-arg operator-shaped unit passes through", () => {
 	assert.deepEqual(
 		$p.all.are($p.in("[String]")),
 		{ _all: { _in: "[String]" } }
 	);
 });
 
-test("$p.all.are with 2-arg field-centered chunk inverts", () => {
+test("$p.all.are with 2-arg field-centered unit inverts", () => {
 	assert.deepEqual(
 		$p.all.are($p.in("myTags","[String]")),
 		{ _all: { _in: { myTags: "[String]" } } }
@@ -329,7 +329,7 @@ test("$p.all.are with scoped multi-condition passes through without inversion", 
 	);
 });
 
-test("$p.any merges chunks into object", () => {
+test("$p.any merges units into object", () => {
 	assert.deepEqual(
 		$p.any(
 			$p.eq("email","String"),
@@ -339,7 +339,7 @@ test("$p.any merges chunks into object", () => {
 	);
 });
 
-test("$p.all merges chunks into object", () => {
+test("$p.all merges units into object", () => {
 	assert.deepEqual(
 		$p.all(
 			$p.eq("email","String"),
@@ -354,7 +354,7 @@ test("$p.all merges chunks into object", () => {
 // $p — errors
 // ************************
 
-test("$p() throws on non-object chunk", () => {
+test("$p() throws on non-object unit", () => {
 	assert.throws(() => $p("foo","bar","baz","extra"));
 });
 
@@ -370,20 +370,20 @@ test("$p.lit.eq() throws with wrong arg count", () => {
 	assert.throws(() => $p.lit.eq("foo"));
 });
 
-test("$p.and() throws on non-object chunk", () => {
-	assert.throws(() => $p.and("notAChunk"));
+test("$p.and() throws on non-object unit", () => {
+	assert.throws(() => $p.and("notAUnit"));
 });
 
-test("$p.or() throws on non-object chunk", () => {
-	assert.throws(() => $p.or("notAChunk"));
+test("$p.or() throws on non-object unit", () => {
+	assert.throws(() => $p.or("notAUnit"));
 });
 
-test("$p.any.is() throws on non-object chunk", () => {
-	assert.throws(() => $p.any.is("notAChunk"));
+test("$p.any.is() throws on non-object unit", () => {
+	assert.throws(() => $p.any.is("notAUnit"));
 });
 
-test("$p.all.are() throws on non-object chunk", () => {
-	assert.throws(() => $p.all.are("notAChunk"));
+test("$p.all.are() throws on non-object unit", () => {
+	assert.throws(() => $p.all.are("notAUnit"));
 });
 
 test("$p.any.is() throws when inner operator doesn't start with _", () => {
@@ -429,8 +429,8 @@ test("$a.COUNT() with no args has field=COUNT, no over", () => {
 });
 
 test("$a.COUNT works as $m key", () => {
-	var chunk = $m($a.COUNT($m("over","books")), null);
-	var keys = Object.getOwnPropertySymbols(chunk);
+	var unit = $m($a.COUNT($m("over","books")), null);
+	var keys = Object.getOwnPropertySymbols(unit);
 	assert.equal(keys.length, 1);
 	assert.equal(keys[0].description, "COUNT");
 });
@@ -453,7 +453,7 @@ test("$a.COUNT() called as tagged template throws", () => {
 });
 
 test("$a.COUNT() with invalid combinator throws", () => {
-	assert.throws(() => $a.COUNT("notAChunk"));
+	assert.throws(() => $a.COUNT("notAUnit"));
 });
 
 test("$a.COUNT() with invalid over throws", () => {

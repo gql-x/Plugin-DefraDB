@@ -48,7 +48,7 @@ The set of non-prefixed types extends the GraphQL spec built-ins with these addi
 
 In addition to the core variable hoisting and dynamic composition described above, this DSL offers:
 
-* Two kinds of fluent helpers: option-key helpers (`varFilters(..)`, `selectionSet(..)`, `over(..)`, `groupBy(..)`, etc.) and chunk-producing helpers (`$p(..)`, `$a`, and `GROUP(..)`); both produce the same plain JS object structures the Composer accepts directly. These helpers reduce repetition and visual tax, but their object literal equivalents are always accepted as alternatives, or for mix-and-match.
+* Two kinds of fluent helpers: option-key helpers (`varFilters(..)`, `selectionSet(..)`, `over(..)`, `groupBy(..)`, etc.) and unit-producing helpers (`$p(..)`, `$a`, and `GROUP(..)`); both produce the same plain JS object structures the Composer accepts directly. These helpers reduce repetition and visual tax, but their object literal equivalents are always accepted as alternatives, or for mix-and-match.
 
 * Short-hand helpers for common arguments (`input`, `filter`) in both literal-based and variable-based forms, at both operation and field level (if applicable)
 
@@ -164,7 +164,7 @@ This DSL provides two families of helpers, and both produce plain JS object stru
 
     In other words, `varFilters(..)` produces `{ varFilters: .. }`.
 
-2. **Chunk-producing helpers** like `$p.<op>(..)`, `$a.<FN>(..)`, `GROUP(..)`. They produce structural object chunks for the inside of those options.
+2. **Unit-producing helpers** like `$p.<op>(..)`, `$a.<FN>(..)`, `GROUP(..)`. They produce structural object units for the inside of those options.
 
     In other words, `$p.eq(..)` produces a `{ field: { _eq: value } }` shaped object.
 
@@ -228,7 +228,7 @@ In addition to the methods/helpers inherited from Composer, the plugin instance 
 
 Additionally, the following DefraDB-specific helpers are included:
 
-* `$p`: helper for composing filter (aka "predicate") chunks (variable-based and literal-based); also includes `$p.lit.*`, `$p.any`, `$p.all`, etc
+* `$p`: helper for composing filter (aka "predicate") units (variable-based and literal-based); also includes `$p.lit.*`, `$p.any`, `$p.all`, etc
 
 * `$a`: helper proxy for field-level aggregate functions (`COUNT`, `SUM`, `MAX`, `MIN`, `AVG`, etc) in selection-sets
 
@@ -390,7 +390,7 @@ The `get(..)`, `add(..)`, `update(..)`, `delete(..)`, and `<AggregateFn>(..)` me
 
     Produces: `groupBy: [Age, Country]`.
 
-* `GROUP` (aggregate sub-selector helper): produces a chunk for use as a combinator inside `$a.<FN>(..)`, specifying which field the aggregate operates on within each group; not a top-level option itself. See the "Grouping" subsection under "Aggregates" below for more information.
+* `GROUP` (aggregate sub-selector helper): produces a unit for use as a combinator inside `$a.<FN>(..)`, specifying which field the aggregate operates on within each group; not a top-level option itself. See the "Grouping" subsection under "Aggregates" below for more information.
 
     For example:
 
@@ -415,9 +415,9 @@ The Composer-inherited helpers `varArgs`, `litArgs`, and `varDefs` are also acce
 
 #### DefraDB-specific Helpers
 
-* `$p` (filter DSL helper): a composable helper for building filter (aka, predicate) chunks for `litFilters` / `varFilters` (and the `filter` keys inside `litArgs` / `varArgs`). Reduces the syntactic tax of nested filter payloads.
+* `$p` (filter DSL helper): a composable helper for building filter (aka, predicate) units for `litFilters` / `varFilters` (and the `filter` keys inside `litArgs` / `varArgs`). Reduces the syntactic tax of nested filter payloads.
 
-    `$p(chunk1, chunk2, ..)` composes/merges multiple filter chunks; it takes the place of an object literal on the right side of `varFilters:` / `litFilters:`, merging the individual chunks passed in.
+    `$p(unit1, unit2, ..)` composes/merges multiple filter units; it takes the place of an object literal on the right side of `varFilters:` / `litFilters:`, merging the individual units passed in.
 
     ```js
     varFilters: $p(
@@ -428,7 +428,7 @@ The Composer-inherited helpers `varArgs`, `litArgs`, and `varDefs` are also acce
 
     Produces operation parameters: `$firstName: String, $userLastName: String`, and operation arguments: `filter: { firstName: { _eq: $firstName }, lastName: { _eq: $userLastName } }`.
 
-    **NOTE:** Since `$p(..)` composes object chunks, the chunks it accepts can also be object-spread directly into a regular object literal as a more flexible alternative, useful when mixing DSL chunks with plain object properties. For example:
+    **NOTE:** Since `$p(..)` composes object units, the units it accepts can also be object-spread directly into a regular object literal as a more flexible alternative, useful when mixing DSL units with plain object properties. For example:
 
     ```js
     $p(
@@ -446,7 +446,7 @@ The Composer-inherited helpers `varArgs`, `litArgs`, and `varDefs` are also acce
     }
     ```
 
-    Scoped composition: `$p("field", chunk1, chunk2, ..)` scopes merged child chunks under a field key:
+    Scoped composition: `$p("field", unit1, unit2, ..)` scopes merged child units under a field key:
 
     ```js
     varFilters: $p("user",
@@ -457,7 +457,7 @@ The Composer-inherited helpers `varArgs`, `litArgs`, and `varDefs` are also acce
 
     Produces operation parameters: `$userDocID: ID, $isEnabled: Boolean`, and operation arguments: `filter: { user: { _docID: { _eq: $userDocID }, isEnabled: { _eq: $isEnabled } } }`.
 
-    Combinators: `$p.and(..)`, `$p.or(..)`, and `$p.not(..)` produce `_and` / `_or` / `_not` chunks. These chunk forms are usable directly at the top level in place of the `$p(..)` composer, since they each return a complete filter payload on their own. `$p.and(..)` and `$p.or(..)` wrap their chunks in an array; `$p.not(..)` merges its chunks into a single object.
+    Combinators: `$p.and(..)`, `$p.or(..)`, and `$p.not(..)` produce `_and` / `_or` / `_not` units. These unit forms are usable directly at the top level in place of the `$p(..)` composer, since they each return a complete filter payload on their own. `$p.and(..)` and `$p.or(..)` wrap their units in an array; `$p.not(..)` merges its units into a single object.
 
     ```js
     varFilters: $p.or(
@@ -477,15 +477,15 @@ The Composer-inherited helpers `varArgs`, `litArgs`, and `varDefs` are also acce
 
     Produces operation parameters: `$isDeleted: Boolean, $isArchived: Boolean`, and operation arguments: `filter: { _not: { isDeleted: { _eq: $isDeleted }, isArchived: { _eq: $isArchived } } }`.
 
-    The remaining helpers below all produce chunks that must be passed into `$p(..)` (or `$p("field", ..)`, or `$p.and(..)` / `$p.or(..)` / `$p.not(..)`) to be used as a filter payload.
+    The remaining helpers below all produce units that must be passed into `$p(..)` (or `$p("field", ..)`, or `$p.and(..)` / `$p.or(..)` / `$p.not(..)`) to be used as a filter payload.
 
-    Variable-style operators: `$p.<op>(..)` produces a field-centered comparator chunk. Any property name is interpreted as the operator name, with `_` prepended if not already present (`$p.eq` → `_eq`, `$p._in` → `_in`).
+    Variable-style operators: `$p.<op>(..)` produces a field-centered comparator unit. Any property name is interpreted as the operator name, with `_` prepended if not already present (`$p.eq` → `_eq`, `$p._in` → `_in`).
 
     The 2-arg form `$p.<op>(field,type)` defaults the variable name to the field name:
 
     ```js
     $p.eq("firstName","String")
-    // chunk: { firstName: { _eq: "String" } }
+    // unit: { firstName: { _eq: "String" } }
     // type def: $firstName: String, filter: { firstName: { _eq: $firstName } }
     ```
 
@@ -501,21 +501,21 @@ The Composer-inherited helpers `varArgs`, `litArgs`, and `varDefs` are also acce
 
     ```js
     $p.eq("firstName","userFirstName","String")
-    // chunk: { firstName: { _eq: { userFirstName: "String" } } }
+    // unit: { firstName: { _eq: { userFirstName: "String" } } }
     // type def: $userFirstName: String, filter: { firstName: { _eq: $userFirstName } }
     ```
 
-    Literal-style operators: `$p.lit.<op>(field,value)` produces a literal filter chunk (for use in `litFilters` / `litArgs.filter`).
+    Literal-style operators: `$p.lit.<op>(field,value)` produces a literal filter unit (for use in `litFilters` / `litArgs.filter`).
 
     ```js
     $p.lit.eq("isEnabled", true)
-    // chunk: { isEnabled: { _eq: true } }
+    // unit: { isEnabled: { _eq: true } }
     // filter: { isEnabled: { _eq: true } }
     ```
 
-    Relation/list traversal: `$p.any(..)` and `$p.all(..)` produce `_any` / `_all` chunks, used for filtering across relation fields (multi-element references) or scalar list fields. They merge their chunks into a single object payload (not an array, unlike `$p.and` / `$p.or`).
+    Relation/list traversal: `$p.any(..)` and `$p.all(..)` produce `_any` / `_all` units, used for filtering across relation fields (multi-element references) or scalar list fields. They merge their units into a single object payload (not an array, unlike `$p.and` / `$p.or`).
 
-    For relation fields (objects with sub-fields), pass field-centered comparator chunks directly:
+    For relation fields (objects with sub-fields), pass field-centered comparator units directly:
 
     ```js
         varFilters: $p("emails",
@@ -552,7 +552,7 @@ The Composer-inherited helpers `varArgs`, `litArgs`, and `varDefs` are also acce
 
     Produces operation parameters: `$recoveryCodes: [String]`, and operation arguments: `filter: { recoveryCodes: { _all: { _in: $recoveryCodes } } }`.
 
-    **NOTE:** The key semantic distinction: `$p.any(..)` / `$p.all(..)` express "elements **where** [field] matches X" — the inner chunks reference sub-fields of relation objects. `$p.any.is(..)` / `$p.all.are(..)` express "elements **that are** X" — an identity check on scalar list elements themselves. The `.is(..)` / `.are(..)` forms invert field-centered chunks accordingly.
+    **NOTE:** The key semantic distinction: `$p.any(..)` / `$p.all(..)` express "elements **where** [field] matches X" — the inner units reference sub-fields of relation objects. `$p.any.is(..)` / `$p.all.are(..)` express "elements **that are** X" — an identity check on scalar list elements themselves. The `.is(..)` / `.are(..)` forms invert field-centered units accordingly.
 
 The Composer-inherited helpers `operationName`, `$f`, `$t`, `$v`, and `$m` are also available on the plugin instance; see [Composer](https://github.com/gql-x/composer/blob/main/README.md) for more info.
 
@@ -586,7 +586,7 @@ Produces an operation-level type definition `$someVar: String` and a field-level
 
 Field-level arguments *are* currently allowed on object fields with sub-selection (see below), as well as the aggregate functions (see "Aggregates" below).
 
-To use field-level arguments (and aliases, if desired) on an object field, with sub-selection, pair the `$f` helper with `$m` to produce a computed-property selection-set entry. The `$f` interpolation accepts an array of chunks (merged together), so the option-key helpers and other chunk producers compose naturally inside it:
+To use field-level arguments (and aliases, if desired) on an object field, with sub-selection, pair the `$f` helper with `$m` to produce a computed-property selection-set entry. The `$f` interpolation accepts an array of units (merged together), so the option-key helpers and other unit producers compose naturally inside it:
 
 ```js
 selectionSet(
@@ -604,7 +604,7 @@ selectionSet(
 
 **NOTE:** The `[ ]` surrounding the interpolation expression is there to allow the two `litArgs(..)` and `litFilters(..)` values. If there's only one value being interpolated, you can pass it directly without the `[ ]` around it.
 
-The `$f` interpolation also accepts a single object literal directly, equivalent to the array-of-chunks form above:
+The `$f` interpolation also accepts a single object literal directly, equivalent to the array-of-units form above:
 
 ```js
 selectionSet(
@@ -641,7 +641,7 @@ DefraDB supports several aggregate functions inside selection-sets: `COUNT`, `MA
 
 `$a.<FN>(..)` produces a `$f`-style token usable directly as a selection-set entry for a field-level aggregate. Any GraphQL-name function is accepted; `$a.COUNT`, `$a.MAX`, `$a.SUM`, `$a.MIN`, `$a.AVG`, etc all work; the proxy doesn't restrict to a fixed list.
 
-It accepts the same chunks any field-level reference accepts: `over(..)`, `varArgs(..)`, `litArgs(..)`, `varFilters(..)`, `litFilters(..)`, and the `GROUP(..)` selector (see below).
+It accepts the same clauses any field-level reference accepts: `over(..)`, `varArgs(..)`, `litArgs(..)`, `varFilters(..)`, `litFilters(..)`, and the `GROUP(..)` selector (see below).
 
 Inline (no alias):
 

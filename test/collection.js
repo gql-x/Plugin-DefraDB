@@ -86,7 +86,7 @@ test("add() produces mutation shape", () => {
 	assert.ok(text.includes("add_User: add_Dev_User(input:{username:$username})"));
 });
 
-test("add() kind cannot be overridden by chunk", () => {
+test("add() kind cannot be overridden by unit", () => {
 	var DQL = createDefraDBComposer();
 	var { kind } = DQL.collection("User").add({ kind: "query" });
 	assert.equal(kind, "mutation");

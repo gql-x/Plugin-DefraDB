@@ -731,7 +731,7 @@ test("subscription() presets kind:subscription", () => {
 	assert.ok(text.startsWith("subscription User"));
 });
 
-test("raw() with kind:subscription translates collectionName chunks", () => {
+test("raw() with kind:subscription translates collectionName units", () => {
 	var { kind, text } = raw({
 		kind: "subscription",
 		collectionName: "User",
@@ -740,7 +740,7 @@ test("raw() with kind:subscription translates collectionName chunks", () => {
 	assert.ok(text.startsWith("subscription User"));
 });
 
-test("actionPrefix chunk applies prefix to root field", () => {
+test("actionPrefix unit applies prefix to root field", () => {
 	var { text, resName, } = mutation(
 		{ collectionName: "User", },
 		actionPrefix("add_")
@@ -749,7 +749,7 @@ test("actionPrefix chunk applies prefix to root field", () => {
 	assert.ok(normalize(text).startsWith("mutation User { add_User {"));
 });
 
-test("actionPrefix chunk with namePrefix applies both", () => {
+test("actionPrefix unit with namePrefix applies both", () => {
 	var { text, resName, } = mutation(
 		{
 			collectionName: "User",
