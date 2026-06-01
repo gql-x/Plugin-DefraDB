@@ -62,20 +62,18 @@ function decorateDefraDB(prefixedAPI,composer,composerInternals) {
 		};
 	}
 
-	return Object.assign(prefixedAPI,{
-		// re-expose composer helpers on the API surface
-		$f: composer.$f,
-		$t: composer.$t,
-		$v: composer.$v,
-		$m: composer.$m,
-		varArgs: composer.varArgs,
-		litArgs: composer.litArgs,
-		varDefs: composer.varDefs,
-		operationName: composer.operationName,
-		selectionSet: composer.selectionSet,
+	var {
+		// skip these from composer
+		raw: _, query: _, mutation: _, subscription: _, root: _,
 
-		// (but NOT root; defradb provides its own
-		// root() with `over` support)
+		// re-expose the rest of composer's API surface
+		...exposeFromComposer
+	} = composer;
+
+	return Object.assign(prefixedAPI,{
+		...exposeFromComposer,
+
+		// defradb provides its own root() with `over` support
 		root: root,
 
 		// add DefraDB-specific helpers (not in composer)
